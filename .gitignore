@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+build/
+dist/
+
+# 本地跑出来的报告（基线本身要入库，报告不必）
+reports/
+.reports/
+*.local.json
+
+# 本机私有配置（含个人路径，绝不入库）
+pasm-skills.local.json
+
+# 编辑器 / 系统
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
