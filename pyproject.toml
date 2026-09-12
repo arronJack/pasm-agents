@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pasm-agents"
-version = "0.4.1"
+version = "0.4.2"
 description = "PASM 智能体集 —— 基于 PASM 引擎的成品智能体：游戏 NPC / 老人陪伴 / 学习陪伴 + 七个长期验证智能体"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -49,8 +49,11 @@ pasm-agents = "pasm_agents.cli:main"
 [project.entry-points."pasm_skills.agents"]
 pasm-verifiers = "pasm_agents.verifiers"
 
-[tool.setuptools]
-packages = ["pasm_agents", "pasm_agents.verifiers"]
+# ★ 智能体实现在 `agents/`（每个智能体一个文件夹，便于逐个学习/取用），
+#   `pasm_agents/` 是聚合转发层（公开 API 的稳定入口）。
+#   两者都必须进 wheel —— 少一个 `from pasm_agents import NpcAgent` 就会断。
+[tool.setuptools.packages.find]
+include = ["pasm_agents*", "agents*"]
 
 [tool.setuptools.package-data]
 pasm_agents = ["py.typed"]

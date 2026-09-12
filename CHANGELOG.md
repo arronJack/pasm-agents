@@ -2,6 +2,62 @@
 
 本项目遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.4.2] — 2026-09-12
+
+### 重构 —— **每个智能体一个文件夹**（`agents/`）
+
+十个智能体此前全挤在 `pasm_agents/` 一个包里，想单独看某一个得先翻整包。
+现在每个智能体都有自己的家：
+
+```
+agents/
+├── product/{npc,companion,tutor}/        面向使用者
+└── verifiers/{core_verifier,…,soak_longrun}/   面向开发者
+     每个文件夹：README.md + agent.py + __init__.py (+ quickstart.py / run.py)
+```
+
+`pasm_agents/` 退化为**聚合转发层**（10 个 3 行薄壳）。
+这样分层是为了满足一条硬约束：**已发布的技能包、CLI、基座发现机制
+全部依赖 `pasm_agents.*`，不能因为整理目录而破坏用户已经写好的代码。**
+
+| 之前 | 现在 |
+|---|---|
+| `from pasm_agents import NpcAgent` | ✅ 不变 |
+| `pasm_agents.verifiers`（entry point） | ✅ 不变 |
+| `pasm_agents/verifiers/npc_lifelong.py`（技能正文点过名） | ✅ 文件仍在（薄壳），只是指向新实现 |
+| 想看实现 → `pasm_agents/npc.py` | 现在去 `agents/product/npc/agent.py`（旁边就是它的 README） |
+
+**因此本次不改动任何已上传的技能包** —— 四个技能（v0.4.1，已在 WorkBuddy 审核中、
+在 ClawHub 发布）的正文一字未动，它们引用的路径全部仍然有效。
+
+### 新增 —— 每个智能体的 README + 可直接跑的示例
+
+- `agents/README.md`：一句话索引（10 个智能体、两类、实跑耗时）+ 两层结构说明
+- `agents/product/<name>/README.md`：能力表 / 最小用法 / API 表 / persona 字段含义 / 输出样例 / **已知短板如实说明**
+- `agents/product/<name>/quickstart.py`：`python agents/product/npc/quickstart.py` 直接看到效果
+- `agents/verifiers/<name>/README.md`：它查什么（分项表格） / 实跑规模 / 已经抓到过什么
+- `agents/verifiers/<name>/run.py`：帮你配好发现路径，等价于 `python -m pasm_skills run <name>`
+
+### 修复 —— 搬迁暴露出的**真 bug**：回归基线被静默写到了错误位置
+
+`regression` 用 `Path(__file__).resolve().parents[2]` 推仓库根。文件从
+`pasm_agents/verifiers/regression.py` 搬到 `agents/verifiers/regression/agent.py` 后，
+`parents[2]` 从「仓库根」变成了「`agents/`」—— 于是它在 `agents/baselines/` **新建了一份基线**，
+真基线被遮蔽，表面看每项都「与基线一致」。
+
+**这是最危险的一类失效**：检查全绿，但它比对的是自己刚写的一份，从此不再有任何约束力。
+已改为**向上找 `pyproject.toml`** 定位仓库根，搬到哪里都对。
+
+> 教训写进 docs/AGENTS.md 了：**凡是按目录深度推算路径的地方，都会在某次重构后静默失效。**
+
+### 验证
+
+- 全量 **103 ok / 8 warn / 0 fail** —— 与重构前逐项一致
+- 三个 `quickstart.py` + 两个 `run.py` 实跑通过
+- `tools/check_skill_docs.py`（6 类）通过
+- **wheel 构建 + 解包安装测试**：在仓库外（模拟 `pip install`）导入
+  `from pasm_agents import NpcAgent` / `pasm_agents.verifiers` / `agents.product.tutor` 全部通过
+
 ## [0.4.1] — 2026-09-12
 
 ### 修复 —— 已发布技能的正文（ClawHub v0.2.1，**33 次下载**）会让人跑不动

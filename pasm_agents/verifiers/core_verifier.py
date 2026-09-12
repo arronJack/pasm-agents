@@ -1,28 +1,14 @@
-"""core-verifier —— PASM 核心全量体检。
+"""CoreVerifierAgent 的稳定入口 —— 实现在 `agents/verifiers/core_verifier/`（每个智能体一个文件夹）。
 
-它是"长期验证"的主力：一次运行就把核心包的关键事实全查一遍
-（引擎契约 / 认知层是否真的落盘 / 符号闭环接线 / 学习层两档 / 环境插件 / 冒烟），
-结论可落 JSON 归档，前后对比即可发现"哪一天悄悄退化了"。
+本模块只做转发：公开 API 与历史版本完全一致，
+所以 `from pasm_agents import CoreVerifierAgent` 不受目录重构影响。
 """
 from __future__ import annotations
 
-from pasm_skills import checks
-from pasm_skills.agent import Agent, register
+from agents.verifiers.core_verifier import (  # noqa: F401
+    CoreVerifierAgent,
+)
 
-
-@register
-class CoreVerifierAgent(Agent):
-    """对 PASM 核心做一次全量契约 / 落盘 / 闭环 / 学习层体检。
-
-    用法：
-        python -m pasm_skills run core-verifier
-        python -m pasm_skills run core-verifier --json
-    """
-
-    name = "core-verifier"
-    goal = "一次运行查清核心包是否完好：契约、落盘、闭环、学习层、冒烟"
-    needs = ("core",)
-
-    def run(self):
-        checks.all_checks(self)
-        return None
+__all__ = [
+    "CoreVerifierAgent",
+]

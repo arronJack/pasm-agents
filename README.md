@@ -127,15 +127,22 @@ pasm-agents list
 pasm-agents inspect my_herbalist
 ```
 
-或直接从源码跑示例：
+或直接从源码跑 —— **每个智能体自己文件夹里就有可跑示例**：
 
 ```bash
 git clone https://gitee.com/arronzheng/pasm-agents
 cd pasm-agents
-python examples/npc_quickstart.py
-python examples/companion_quickstart.py
-python examples/tutor_quickstart.py
+
+python agents/product/npc/quickstart.py         # 游戏 NPC
+python agents/product/companion/quickstart.py   # 老人陪伴
+python agents/product/tutor/quickstart.py       # 学习陪伴
+
+python agents/verifiers/parity_guard/run.py     # 验证智能体同理（<1s，最快）
 ```
+
+> 想看某个智能体**到底怎么写的**：打开 `agents/product/npc/agent.py`，
+> 旁边就是它的 `README.md`（功能 / API / persona 字段 / 输出样例）。
+> 索引在 [`agents/README.md`](agents/README.md)。
 
 ---
 
@@ -149,23 +156,55 @@ python examples/tutor_quickstart.py
 
 每个智能体的 `summary()` 与落盘 JSON 都带 `tier` 字段。
 
-## 五、目录
+## 五、目录：**每个智能体一个文件夹**
+
+打开 `agents/` 下的任意一个文件夹，都能看到它自己的**实现 + 说明 + 可跑示例** ——
+不用在一个大包里翻。
 
 ```
 pasm-agents/
-├── pasm_agents/                 ★ 产品智能体
-│   ├── npc.py                   NpcAgent —— 游戏 NPC
-│   ├── companion.py             ElderlyCompanion —— 老人陪伴
-│   ├── tutor.py                 LearningTutor —— 学习陪伴
-│   ├── cli.py                   pasm-agents 命令行
-│   └── verifiers/               ★ 验证智能体（7 个，被基座发现）
+├── agents/                          ★ 智能体目录（每个智能体一个文件夹）
+│   ├── README.md                    一句话索引：10 个智能体，两类
+│   ├── product/                     面向使用者
+│   │   ├── npc/                       游戏 NPC
+│   │   │   ├── README.md              功能 / API / persona 字段 / 输出样例
+│   │   │   ├── agent.py               ★ 实现本体
+│   │   │   ├── __init__.py            转发
+│   │   │   └── quickstart.py          python agents/product/npc/quickstart.py
+│   │   ├── companion/                 老人陪伴
+│   │   └── tutor/                     学习陪伴
+│   └── verifiers/                   面向开发者
+│       ├── README.md                  结构层 / 行为层两层说明
+│       ├── core_verifier/             结构体检
+│       ├── parity_guard/              两仓一致性
+│       ├── regression/                静默退化
+│       ├── npc_lifelong/              90 天 NPC 行为体检
+│       ├── companion_elderly/         30 天陪伴行为体检（安全关键）
+│       ├── study_tutor/               30 天学习行为体检
+│       └── soak_longrun/              6000 步长效耐久
 │
-├── skill/                       4 份技能正文（3 产品 + 1 验证）
-├── tools/build_skill.py         声明本仓技能 → 调用基座的打包库
-├── examples/                    30 秒示例
-├── baselines/                   事实基线（regression 用）
-└── docs/AGENTS.md               智能体设计手册（选型分析 + 真问题表）
+├── pasm_agents/                     ★ 聚合转发层（公开 API 的稳定入口）
+│   ├── __init__.py                    from pasm_agents import NpcAgent
+│   ├── npc.py / companion.py / tutor.py        → 转发到 agents/product/*
+│   ├── verifiers/                     → 转发到 agents/verifiers/*（基座靠它发现）
+│   └── cli.py                         pasm-agents 命令行
+│
+├── skill/                           4 份技能正文（3 产品 + 1 验证）
+├── tools/                           打包脚本 + 技能文档一致性检查
+├── examples/                        跨智能体的综合示例
+├── baselines/                       事实基线（regression 用，入库）
+└── docs/AGENTS.md                   设计手册（选型分析 + 真问题表）
 ```
+
+> **为什么保留 `agents/` 和 `pasm_agents/` 两层？**
+> `agents/` 是**实现的家**，`pasm_agents/` 是**稳定入口**。
+> 已发布的技能文档、CLI、以及基座的发现机制都依赖 `pasm_agents.*` ——
+> 把入口和实现分开，**以后目录怎么整理都不会破坏用户已经写好的代码**：
+>
+> ```python
+> from pasm_agents import NpcAgent            # 推荐：稳定入口
+> from agents.product.npc import NpcAgent     # 也行：直接指到那个文件夹
+> ```
 
 ## 六、相关仓
 

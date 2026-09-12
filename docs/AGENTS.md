@@ -224,9 +224,33 @@ degrade to an explicit `WARN (tiers differ, not comparable)`.
 > 本章是 **产品层**，不是验证层。它们是用户拿来就用的智能体，
 > 而不是给核心做体检的智能体。
 
+### 0. 目录：每个智能体一个文件夹（v0.4.2 起）
+
+十个智能体**不再挤在一个包里**，各自有独立文件夹，打开就能读到它的实现与说明：
+
+```
+agents/
+├── product/{npc,companion,tutor}/           产品智能体
+└── verifiers/{…7 个…}/                       验证智能体
+     每个文件夹：README.md + agent.py + __init__.py (+ 可跑的 quickstart.py / run.py)
+```
+
+`pasm_agents/` 退化为**聚合转发层**（`from pasm_agents import NpcAgent` 仍然有效）。
+这样拆的理由与代价：
+
+| | 好处 | 代价 |
+|---|---|---|
+| 实现搬到 `agents/` | 一个智能体一个文件夹，**不用在大包里翻**；代码与它的说明、示例放在一起 | 多一层转发 |
+| 保留 `pasm_agents/` | 已发布的技能文档、CLI、基座发现机制**全部继续有效**（目录怎么整理都不破坏用户代码） | 需要维护 10 个 3 行薄壳 |
+
+**踩过的坑**：文件一搬，按 `parents[N]` 数出来的"仓库根"就变了 ——
+`regression` 曾因此把基线静默写到 `agents/baselines/`，真基线被遮蔽，
+**回归检查看起来一切正常但已经失去意义**。现在改成向上找 `pyproject.toml`，
+搬到哪里都对。**凡是按目录深度推算路径的地方，都会在某次重构后静默失效。**
+
 ### 1. 为什么需要这层
 
-v0.2.x 的本仓只有**验证智能体**（现位于 `pasm_agents/verifiers/`）—— 跑得动但跑出来是断言报告，
+v0.2.x 的本仓只有**验证智能体**（现位于 `agents/verifiers/`）—— 跑得动但跑出来是断言报告，
 不能塞进游戏、不能拿来陪老人、不能辅导学生。它们是"看 PASM 健不健康"的工具。
 
 **产品智能体** 是另一个维度：你 `pip install` 完就能 `from pasm_agents import NpcAgent`，
