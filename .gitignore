@@ -20,3 +20,6 @@ pasm-skills.local.json
 .vscode/
 .DS_Store
 Thumbs.db
+
+# 运行产物（不是基线；基线是 core.json，要入库）
+baselines/last-run.json

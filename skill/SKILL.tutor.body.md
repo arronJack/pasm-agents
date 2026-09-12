@@ -1,6 +1,3 @@
-> 本文件是 **pasm-tutor 技能 SKILL.md 的正文部分**（不含 frontmatter）。
-> `tools/build_skill.py` 会把它分别拼上两种归档形态的 frontmatter（`zip-root` / `slug-dir`），产出可直接上传的包。
-
 # PASM 学习陪伴智能体（pasm-tutor）
 
 给学生的陪伴式学习助手：**薄弱点定位 + 最弱优先选题 + 鼓励式对话 + 学情可机读导出**。
@@ -25,6 +22,32 @@ print(t.chat("我哪里不行"))    # 直接给出最弱项 + 掌握度
 print(t.snapshot())           # 学情结构（纯 JSON，画像层可直接消费）
 ```
 
+## 这个技能给你什么
+
+| 能力 | 说明 |
+|---|---|
+| **掌握度追踪** | 每个知识点一个 0~1 掌握度，用 EMA 平滑，越近的表现权重越高 |
+| **最弱优先选题** | `pick_next()` 有 80% 概率挑最薄弱的知识点，20% 随机防"只刷熟题"的假象 |
+| **鼓励式对话** | 按当前掌握度与近期表现渲染语气；说"我不会"和说"我会了"给不同反馈 |
+| **学情可机读导出** | `snapshot()` 输出纯 dict（学生 / 各知识点掌握度 / 最弱项 / 平均 / 档位），画像层可直接消费 |
+
+**你主要就用这几个方法**：`report(topic, score)` · `pick_next()` · `chat()` · `mastery(topic)` · `snapshot()` · `save()`。
+
+## 它跑在什么之上：基座 pasm-skills
+
+本技能的内容在 **`pasm-agents`** 仓，但它**依赖基座 `pasm-skills`** ——
+`BaseAgent`（记忆读写 / 情绪 / 动作选择 / 反馈 / 持久化的通用实现）在基座里，
+产品智能体只是在其上定了 persona、动作池和回复模板。
+
+| | 是什么 | 装它 |
+|---|---|---|
+| **pasm-skills**（基座） | 只提供能力，**不含任何智能体** | `pip install pasm-skills` |
+| **pasm-agents**（本技能来源） | 游戏 NPC / 老人陪伴 / 学习陪伴 + 7 个验证智能体 | `pip install pasm-agents` |
+
+> 装 `pasm-agents` 会**自动带上基座**，一条命令搞定。
+> 只装基座时 `python -m pasm_skills list` 显示 0 个智能体 —— 那是刻意的，不是你装错了。
+> 想用基座写自己的智能体：<https://github.com/arronJack/pasm-skills/blob/master/docs/TUTORIAL.md>
+
 ## 什么时候用
 
 - 需要**按知识点追踪掌握度**，而不是只记总分；
@@ -46,9 +69,9 @@ print(t.snapshot())           # 学情结构（纯 JSON，画像层可直接消�
 ## 1. 30 秒上手
 
 ```bash
-git clone https://gitee.com/arronzheng/pasm-agents
-cd pasm-agents
-pip install -e .          # 会自动装上基座 pasm-skills
+pip install pasm-agents                    # 自动带上基座 pasm-skills（推荐）
+# 没有 PyPI 环境时改源码安装：
+#   git clone https://gitee.com/arronzheng/pasm-agents && cd pasm-agents && pip install -e .
 
 pasm-agents demo tutor                 # 预置剧本（小雅 30 天 × 4 题）
 pasm-agents run tutor --id=my_tutor    # 交互模式

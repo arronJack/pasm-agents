@@ -1,6 +1,3 @@
-> 本文件是 **pasm-companion 技能 SKILL.md 的正文部分**（不含 frontmatter）。
-> `tools/build_skill.py` 会把它分别拼上两种归档形态的 frontmatter（`zip-root` / `slug-dir`），产出可直接上传的包。
-
 > ⚠️ **这不是医疗器械，也不替代任何医疗或急救服务。**
 > 它的定位是"记得住、问得到、异常时提醒到人"的陪伴与记录工具；
 > 任何涉及用药调整、诊断、急救的判断都必须由专业人员做出。
@@ -34,6 +31,32 @@ for med in comp.due_medication(now_hour=8):
     print(f"⏰ 该吃 {med['name']} {med['dose']}")
 ```
 
+## 这个技能给你什么
+
+| 能力 | 说明 |
+|---|---|
+| **关键事实永不丢** | 用药 / 过敏 / 家人 / 本人信息单独存一层、**按标签直查**（命中率 100%），不会被日常闲聊挤掉 |
+| **用药提醒** | 按 `medication_schedule` 的钟点判断该不该提醒，返回"还没吃的药" |
+| **危机升级** | 识别胸闷 / 摔倒 / 意识异常等表达，生成含紧急联系人与现场快照的升级信息 |
+| **陪伴对话** | 情绪 + 记忆渲染的回应，语气跟着老人当天状态走 |
+
+**你主要就用这几个方法**：`chat()` · `detect_crisis()` · `escalate()` · `due_medication()` · `observe()` · `save()`。
+
+## 它跑在什么之上：基座 pasm-skills
+
+本技能的内容在 **`pasm-agents`** 仓，但它**依赖基座 `pasm-skills`** ——
+`BaseAgent`（记忆读写 / 情绪 / 动作选择 / 反馈 / 持久化的通用实现）在基座里，
+产品智能体只是在其上定了 persona、动作池和回复模板。
+
+| | 是什么 | 装它 |
+|---|---|---|
+| **pasm-skills**（基座） | 只提供能力，**不含任何智能体** | `pip install pasm-skills` |
+| **pasm-agents**（本技能来源） | 游戏 NPC / 老人陪伴 / 学习陪伴 + 7 个验证智能体 | `pip install pasm-agents` |
+
+> 装 `pasm-agents` 会**自动带上基座**，一条命令搞定。
+> 只装基座时 `python -m pasm_skills list` 显示 0 个智能体 —— 那是刻意的，不是你装错了。
+> 想用基座写自己的智能体：<https://github.com/arronJack/pasm-skills/blob/master/docs/TUTORIAL.md>
+
 ## 什么时候用
 
 - 独居老人需要**长期记住关键事实**（吃什么药、对什么过敏、家人在哪、自己多大），
@@ -57,9 +80,9 @@ for med in comp.due_medication(now_hour=8):
 ## 1. 30 秒上手
 
 ```bash
-git clone https://gitee.com/arronzheng/pasm-agents
-cd pasm-agents
-pip install -e .          # 会自动装上基座 pasm-skills
+pip install pasm-agents                    # 自动带上基座 pasm-skills（推荐）
+# 没有 PyPI 环境时改源码安装：
+#   git clone https://gitee.com/arronzheng/pasm-agents && cd pasm-agents && pip install -e .
 
 pasm-agents demo companion                    # 预置剧本（陈秀兰 30 天）
 pasm-agents run companion --id=my_companion   # 交互模式

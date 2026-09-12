@@ -9,10 +9,11 @@
 
 这类"文档与结构脱节"最适合用机器查 —— 它不需要理解语义，只需要盯住几条硬事实：
 
-  1. 本仓（智能体仓）的正文里，**不许**让人去 clone `pasm-skills` 找智能体；
+  1. 本仓（智能体仓）的正文里，**不许**"只 clone 基座仓"当拿到智能体了；
   2. 正文里出现的 `pip install X` / `git clone .../X`，X 必须是已知存在的仓；
   3. 正文里出现的 `pasm_skills.xxx` / `pasm_agents.xxx` 模块路径必须真实可导入；
-  4. 正文里出现的 CLI 子命令必须在对应 CLI 里存在。
+  4. 正文里出现的 CLI 子命令必须在对应 CLI 里存在；
+  5. 正文里**不许**出现给维护者看的内部注释（它会原样出现在平台上用户看到的页面里）。
 
 用法：
     python tools/check_skill_docs.py          # 退出码 0=通过，1=有问题
@@ -36,6 +37,20 @@ BASE_REPO = "pasm-skills"
 
 #: 基座 CLI 的子命令（与实际实现保持一致）
 BASE_CLI_SUBCMDS = {"list", "agents", "repos", "selftest", "run"}
+
+#: 长得像模块路径、但**不是**模块的标识符。
+#: entry point 组名（如 `pasm_skills.agents`）就是这种 —— 它是字符串名，import 必失败。
+#: 新增时请写清"为什么它不是模块"，别当垃圾桶用。
+NOT_MODULES = {
+    "pasm_skills.agents": "entry point 组名（智能体包用来注册自己），不是模块",
+}
+
+#: 维护者内部注释的特征串 —— 这些是写给改正文的人看的，不该发给用户
+INTERNAL_MARKERS = (
+    "SKILL.md 的正文部分",
+    "build_skill.py 会把它",
+    "产出可直接上传的包",
+)
 
 
 def iter_bodies():
@@ -65,13 +80,25 @@ def check_clone_targets(problems: list) -> None:
 
 
 def check_pip_targets(problems: list) -> None:
+    """`pip install X` 的 X 必须是已知包。
+
+    要按**词**遍历而不是按正则抓第一个 token —— 否则
+    `pip install --upgrade pasm-agents` 会把 `--upgrade` 当成包名（真的踩过）。
+    同时要先切掉行尾注释：`pip install pasm-agents  # 自动带上基座 pasm-skills`
+    里的注释会被误当成第二个包名（也真踩过）。
+    """
     for path, text in iter_bodies():
-        for m in re.finditer(r"pip install\s+(?:-e\s+)?([A-Za-z0-9_\-.\[\]]+)", text):
-            pkg = re.split(r"[\[>=<]", m.group(1))[0]
-            if not pkg or pkg.startswith("."):
-                continue
-            if pkg not in KNOWN_REPOS and pkg not in ("-e",):
-                problems.append("%s：pip install 了未知包 %s" % (path.name, pkg))
+        for m in re.finditer(r"pip install([^\n`]*)", text):
+            code = m.group(1).split("#", 1)[0]       # 去掉行尾注释
+            for tok in code.split():
+                if tok.startswith("-"):          # --upgrade / -e / -U / -r …
+                    continue
+                pkg = re.split(r"[\[>=<;]", tok)[0]
+                if not pkg or pkg.startswith(".") or pkg == "install":
+                    continue
+                # 只对本项目相关的包名做校验，别人的包不管
+                if pkg.startswith("pasm") and pkg not in KNOWN_REPOS:
+                    problems.append("%s：pip install 了未知包 %s" % (path.name, pkg))
 
 
 def check_module_paths(problems: list) -> None:
@@ -83,6 +110,8 @@ def check_module_paths(problems: list) -> None:
             if mod in seen:
                 continue
             seen.add(mod)
+            if mod in NOT_MODULES:               # entry point 组名之类，不是模块
+                continue
             try:
                 importlib.import_module(mod)
             except Exception as ex:                  # noqa: BLE001
@@ -114,6 +143,23 @@ def check_agent_names(problems: list) -> None:
                 problems.append("%s：提到智能体 `%s`，但它没注册上" % (path.name, m.group(1)))
 
 
+def check_no_internal_notes(problems: list) -> None:
+    """正文里不许有给维护者看的内部注释。
+
+    真实翻车：四份正文开头都写着
+        > 本文件是 SKILL.md 的正文部分（不含 frontmatter）…
+        > tools/build_skill.py 会把它拼上两套 frontmatter…
+    这段**原样出现在平台上用户点开的 SKILL.md 里**（ClawHub 实测）。
+    维护者说明应该放 `skill/README.md`。
+    """
+    for path, text in iter_bodies():
+        for marker in INTERNAL_MARKERS:
+            if marker in text:
+                problems.append(
+                    "%s：含维护者内部注释「%s」—— 它会原样出现在用户看到的技能页上，"
+                    "请移到 skill/README.md" % (path.name, marker))
+
+
 def main() -> int:
     bodies = list(iter_bodies())
     if not bodies:
@@ -122,13 +168,13 @@ def main() -> int:
 
     problems: list = []
     for fn in (check_clone_targets, check_pip_targets, check_module_paths,
-               check_cli_subcommands, check_agent_names):
+               check_cli_subcommands, check_agent_names, check_no_internal_notes):
         try:
             fn(problems)
         except Exception as ex:                      # noqa: BLE001
             problems.append("%s 自身出错：%s" % (fn.__name__, ex))
 
-    print("检查 %d 份技能正文" % len(bodies))
+    print("检查 %d 份技能正文（6 类）" % len(bodies))
     if problems:
         print("[FAIL] 发现 %d 个问题：" % len(problems))
         for p in problems:

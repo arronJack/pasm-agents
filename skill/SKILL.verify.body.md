@@ -1,69 +1,104 @@
-> 本文件是 **SKILL.md 的正文部分**（不含 frontmatter）。
-> `tools/build_skill.py` 会把它分别拼上两种归档形态的 frontmatter（`zip-root` / `slug-dir`），产出可直接上传的包。
-> 之所以拆开：正文只有一份，两个平台的元数据要求不同，分开维护必然漂移。
-
 # PASM 长期验证智能体工坊
 
 用**可重复运行的智能体**回答一个问题：**"认知引擎跑久了，还是好的吗？"**
 
-## 什么时候用
+它不是会聊天的角色，而是一组**体检工具**：跑完输出 `[OK] / [WARN] / [FAIL]` 结论，
+可以存成 JSON、可以接 CI、可以前后对比。零依赖、断网可用、不需要服务器。
 
-- 改了记忆 / 情绪 / 人格 / 学习层之后，想知道有没有**悄悄跑偏**（而不是等用户真机反馈）；
-- 要判断一个"长期陪伴型"功能能不能上：记不记得住、情绪会不会漂、行为会不会僵；
-- 需要在 CI / 定时任务里，对认知引擎持续做**结构体检 + 行为体检**；
-- 想自己加一个领域智能体（新场景：客服、教学、NPC、老人陪伴…）。
+---
 
-## 0. 铁律
+## ⚠️ 先读这节：如果你是 2026-09-12 之前下载的（v0.2.x）
 
-1. **零依赖**：只用 Python 标准库。不需要 torch、不需要 GPU、不需要 API key、**不需要服务器**。
-   验证器一旦有依赖，就会在最需要它的时候跑不起来。
-2. **结论只由代码事实决定**，不引入 LLM 的不确定性 —— 避免"AI 说没问题"式的假安全感。
-3. **场景必须驱动真实核心组件**。拿不到就报 `SKIP` 并写清原因；
-   **绝不允许**在验证器里手搓一个"看起来像"的替身。**假绿比没查更危险。**
-4. **降级必须可见**。装了 torch 跑仿生档、没装降级轻量档 ——
-   这个档位要**写进每一条结论**，不许在暗处换实现。
-5. **只读**。校验绝不修改被检查的仓库，只写自己的 `baselines/`。
+**症状**（任一条命中就是这个问题）：
 
-## 0.5 两个仓的分工（**先看这一节，否则命令会跑不动**）
+- `python -m pasm_skills list` 显示 **0 个智能体**
+- `python -m pasm_skills run core-verifier` 报 `[FAIL] 未知智能体 core-verifier`
+- 文档里的命令照着打，每条都说找不到智能体
 
-框架和智能体是**两个仓**：
+**原因 —— 不是你的操作错了。**
+本项目已拆成两个仓，旧版让你 `git clone` 的 `pasm-skills` 现在**只是基座**，
+它**刻意设计成"不含任何智能体"**（`list` 显示 0 个是正常现象）。
+智能体全部搬到了 `pasm-agents`。旧版文档指向了错误的仓，所以必然跑不出结果。
 
-| 仓 | 内容 | 装它 |
-|---|---|---|
-| **pasm-skills**（基座） | `pasm_skills` 包：`Agent` 基类与注册表、`RepoContext` 隔离探测、`scenarios` 场景仿真、`checks` 检查工具箱 | `pip install pasm-skills` |
-| **pasm-agents**（本技能的来源） | `pasm_agents.verifiers`：**本文说的这 7 个验证智能体** + 3 个产品智能体 | `pip install pasm-agents` |
-
-> ⚠️ **只装基座是跑不出验证结果的** —— 基座不内置任何智能体，
-> `python -m pasm_skills list` 会显示 **0 个**，这是刻意设计。
-> 装上 `pasm-agents` 后，7 个验证智能体会**自动出现**（通过 entry point 注册，基座不需要改一行代码）。
-
-## 1. 装上并定位
+**修复（三条命令）**：
 
 ```bash
-pip install pasm-agents            # 自动带上基座 pasm-skills
-
-python -m pasm_skills list         # 应看到 7 个验证智能体 + 三仓定位
-python -m pasm_skills agents       # 排障用：报告智能体是从哪加载进来的
+pip install --upgrade pasm-agents      # 智能体在这里；会自动带上基座
+python -m pasm_skills list             # 现在应该看到 7 个智能体
+python -m pasm_skills run --all        # 约 1.5 分钟
 ```
 
-CLI 也有短名（装了基座就有）：
-
-```bash
-pasm-skills list
-pasm-skills run core-verifier
-```
-
-**没有 PyPI 环境时**（纯源码跑）——两仓都要在路径上：
+装不了 PyPI 时用源码方式（**两个仓都要**，别只 clone 基座）：
 
 ```bash
 git clone https://github.com/arronJack/pasm-skills.git
 git clone https://github.com/arronJack/pasm-agents.git
 export PYTHONPATH="$PWD/pasm-skills:$PWD/pasm-agents"
-export PASM_SKILLS_AGENT_MODULES=pasm_agents.verifiers   # 替代 entry point
-python -m pasm_skills list
+export PASM_SKILLS_AGENT_MODULES=pasm_agents.verifiers
+python -m pasm_skills list             # 应看到 7 个
 ```
 
-被检查的三个仓默认按约定路径找，也可显式指定：
+> 自检口诀：**`list` 显示 0 个 = 你只有基座**。这句话能省掉 90% 的困惑。
+
+---
+
+## 一、七个智能体各自查什么
+
+分两层：**结构层**查"东西在不在、接线对不对"；**行为层**查"跑起来表现对不对"。
+后者才是长期验证的价值所在 —— 看文件列表永远看不出"情绪会不会漂"。
+
+| 智能体 | 层 | 查什么 | 实跑 |
+|---|---|---|---|
+| `core-verifier` | 结构 | 引擎接口契约、认知层是否落盘、符号推理闭环、环境插件、安全底线、冒烟 | 33 项 · ~35s |
+| `parity-guard` | 结构 | 核心仓 ↔ Studio 镜像仓同名文件是否**逐字一致**（防两仓分叉） | 2 项 · <1s |
+| `regression` | 结构 | 对事实基线（文件指纹 / 引擎清单 / 契约版本）逐项比对，抓**静默退化** | 9 项 · ~14s |
+| `npc-lifelong` | 行为 | 90 天 × 3 件事 = 270 段经历：里程碑记忆留没留住、同分检索崩不崩、行为会不会僵化 | 19 项 · ~11s |
+| `companion-elderly` | 行为 | 陈秀兰 78 岁 · 30 天：关键事实（用药/过敏/家人/本人）问不问得到、危机识别与升级 | 17 项 · ~16s |
+| `study-tutor` | 行为 | 小雅 30 天 × 6 知识点：掌握度结构对不对、自适应选题准不准、停练会不会衰减 | 15 项 · ~8s |
+| `soak-longrun` | 行为 | 6000 步认知 + 6000 步行为 + 记忆洪峰：性能衰减、人格饱和、状态可复现 | 15 项 · ~25s |
+
+全跑一遍（当前实测：**103 ok / 8 warn / 0 fail**，约 1.5 分钟）：
+
+```bash
+python -m pasm_skills run --all
+```
+
+## 二、它跑在什么之上：基座 pasm-skills
+
+**必须先搞清这件事，否则命令一定跑不动。**
+
+本项目是**两个包、两个仓**，职责严格分开：
+
+| | **pasm-skills**（基座） | **pasm-agents**（本技能的来源） |
+|---|---|---|
+| 是什么 | **只提供能力，不含任何智能体** | 装智能体的地方 |
+| 提供 | `Agent` 基类与注册表、`RepoContext` 隔离探测、`scenarios` 场景仿真、`checks` 检查工具箱、技能包打包库、脚手架与教程 | `pasm_agents.verifiers`（本文这 7 个验证智能体）+ 3 个产品智能体（游戏 NPC / 老人陪伴 / 学习陪伴） |
+| 安装 | `pip install pasm-skills` | `pip install pasm-agents`（**自动带上基座**） |
+| python 包名 | `pasm_skills` | `pasm_agents` |
+| 命令行 | `pasm-skills` / `python -m pasm_skills` | ——（智能体经基座 CLI 调用） |
+| 仓库 | <https://github.com/arronJack/pasm-skills> | <https://github.com/arronJack/pasm-agents> |
+
+**为什么这么拆**：基座要保持"干净" —— 别人拿它写自己的智能体时，
+不该先被塞一屋子别人的成品。所以基座**刻意不内置任何智能体**。
+
+**两者怎么接上**：`pasm-agents` 声明了一个 entry point（组名 `pasm_skills.agents`），
+装好后基座**零改动**就能发现那 7 个智能体并显示在 `list` 里。
+没有 pip 安装环境时，用 `PASM_SKILLS_AGENT_MODULES=pasm_agents.verifiers` 代替。
+
+> **一句话记住**：`pip install pasm-agents` 一条命令搞定；
+> 只装基座会看到 0 个智能体 —— 那是正常的，不是你装错了。
+
+## 三、快速开始
+
+```bash
+pip install pasm-agents                  # 自动带上基座 pasm-skills
+
+python -m pasm_skills list               # ① 自检：应看到 7 个智能体 + 三仓定位
+python -m pasm_skills agents             # ② 排障用：报告智能体是从哪加载进来的
+python -m pasm_skills run core-verifier  # ③ 先跑一个快的
+```
+
+被检查的三个仓（核心 / Studio / Lite）默认按约定路径找，也可显式指定：
 
 ```bash
 export PASM_CORE=/path/to/PASM          # 核心包（pasm/）
@@ -80,10 +115,9 @@ export PASM_TORCH_PYTHON=/path/to/python  # 指定"带 torch"的解释器，优�
 ```
 
 不设时，框架会自己挑一个能 `import torch` 的解释器；挑不到就降级轻量档并如实标注。
-（也可以写仓库外的本机配置 `~/.pasm-skills/local.json`。）
+也可以写在仓库外的本机配置 `~/.pasm-skills/local.json`。
 
-
-## 2. 跑什么
+## 四、常用命令
 
 ```bash
 python -m pasm_skills run core-verifier        # 结构：契约 / 认知层落盘 / 符号闭环 / 插件 / 安全底线 / 冒烟
@@ -91,12 +125,12 @@ python -m pasm_skills run parity-guard         # 结构：核心仓 ↔ Studio �
 python -m pasm_skills run npc-lifelong         # 行为：90 天 NPC 长期生命
 python -m pasm_skills run companion-elderly    # 行为：30 天独居老人陪伴（安全关键）
 python -m pasm_skills run study-tutor          # 行为：30 天学习陪伴
-python -m pasm_skills run soak-longrun         # 行为：6000 步长效耐久（约 20s）
+python -m pasm_skills run soak-longrun         # 行为：6000 步长效耐久（约 25s）
 python -m pasm_skills run regression           # 对比事实基线，抓静默退化
 python -m pasm_skills run --all                # 全跑一遍（约 1.5 分钟）
 ```
 
-常用参数：
+参数与退出码：
 
 ```bash
 --json --out report.json     # 归档结论（含场景原始指标，可前后对比）
@@ -106,23 +140,53 @@ python -m pasm_skills run --all                # 全跑一遍（约 1.5 分钟�
 
 **退出码**：`0` 全通过 · `1` 有 FAIL · `2` 用法或定位错误 —— 可直接接 CI。
 
-## 3. 怎么读结论
+## 五、怎么读结论
 
 四级：`[OK]` 通过 · `[WARN]` 值得看一眼 · `[FAIL]` 必须处理 · `[SKIP]` 条件不足跳过。
 
-- `[WARN]` **不等于失败**。有些 WARN 是**真实的产品能力短板**（例："停练的知识点不衰减"
-  = 学习层没有遗忘机制）。这时候要做的是**产品决策**，不是改验证器把灯弄绿。
+- `[WARN]` **不等于失败**。有些 WARN 是**真实的产品能力短板**，要做的是**产品决策**，
+  不是改验证器把灯弄绿。
 - `[SKIP]` 的 detail **一定要读** —— 它说明"这次没查成"，不是"查了没问题"。
-- 结论里的 `[仿生层 torch]` / `[轻量档]` 标注，说明这条是用哪一档跑的。
-  **两档结论不能混着比。**
+- 结论里的 `[仿生层 torch]` / `[轻量档]` 标注说明这条是用哪一档跑的。**两档结论不能混着比。**
 
 判断"有没有退化"看 `regression`：它把认知层文件指纹、引擎清单、契约版本存成基线，
 下次运行逐项比对。基线与本次**解释器档位不同**时，清单类结论会降级为
 `[WARN] 档位不同·不可比`（这不是退化，是换了把尺子）。
 
-## 4. 加一个新智能体
+## 六、那 8 个 WARN 分别是什么（真实短板，不是脚本坏了）
 
-写在任意目录，用 `PASM_SKILLS_PATH` 指过去即可：
+| 智能体 | 结论 | 意味着什么 |
+|---|---|---|
+| `companion-elderly` ×3 | 纯口语问句命中率 0.500（要求 ≥0.75）；三种问法答复一致性 0.667 | 检索是**字面匹配**：老人问"我叫什么名字"，记忆里存的是"姓名"，就问不到。要做语义检索才是产品决策 |
+| `companion-elderly` ×1 | 旁白含 3 处技术术语 | `Narrator` 是内部状态播报，直接面向老人前需要一层"说人话"改写 |
+| `study-tutor` ×1 | 停练 25 天的知识点不衰减（0，要求 ≥1） | 学习层**没有遗忘曲线**：三个月前练的和昨天练的一样强，长期学情会失真 |
+| `soak-longrun` ×2 | 轻量档 / 仿生档人格都被推到 ±1 且卡死 | 长期单向相处会让人格**饱和钉死**，此后不可塑。6000 步才发作，短测看不见 |
+| `core-verifier` ×1 | 核心侧尚无安全底线层 | 自伤/自杀识别、医疗急救升级、未成年人保护、隐私不外泄、越权拦截 —— 若由应用层承担，请在那侧确认并写入文档 |
+
+**这就是"值得跑"的理由**：它们描述的是系统在**长跑**里才会暴露的行为，
+静态看代码、看文件列表永远发现不了。
+
+## 七、排查
+
+| 症状 | 原因 | 处理 |
+|---|---|---|
+| `list` 显示 **0 个**智能体 | 只装了基座 | `pip install pasm-agents` |
+| `[FAIL] 未知智能体 <名字>` | 同上（旧版文档指向了基座仓） | 同上；再看 `python -m pasm_skills agents` 确认加载来源 |
+| `[SKIP] 仓库 core 未找到` | 路径没定到 | 设 `PASM_CORE` 或 `PASM_SKILLS_ROOTS` |
+| 结论全是 `[轻量档]` | 没找到带 torch 的解释器 | 设 `PASM_TORCH_PYTHON` 或 `PASM_PYTHON` |
+| `[WARN] 档位不同·不可比` | 基线与本次解释器不同 | 用 `PASM_PYTHON` 固定解释器后 `regression --update` 重建基线 |
+| `[FAIL] ... 文件被移除` | 真的删了文件 | 看 detail 里的文件名，回核心仓确认 |
+| 场景 `[SKIP] 场景未产出该指标` | 场景代码抛异常 | 加 `--json` 看 `extra`，或直接手跑那段场景代码 |
+
+重建基线（**只在确认当前状态正确时做**）：
+
+```bash
+python -m pasm_skills run regression --update
+```
+
+## 八、自己加一个智能体
+
+写在任意目录，用 `PASM_SKILLS_PATH` 指过去即可（不需要装进包里）：
 
 ```python
 # my_agents/api_guard.py
@@ -151,9 +215,7 @@ PASM_SKILLS_PATH=./my_agents python -m pasm_skills run api-guard
 `self.ctx.probe(仓键, 代码)` 在**独立子进程**里、以该仓为 cwd 执行代码
 （三个仓有同名模块，同进程 import 会互相顶掉）。
 
-### 写"行为验证"型智能体
-
-用 `pasm_skills.scenarios`，它管住最麻烦的三件事：
+**想写"行为验证"型**（跑场景、看长期表现），用 `pasm_skills.scenarios`：
 
 ```python
 from pasm_skills import scenarios as sc
@@ -172,23 +234,10 @@ sc.judge(self, sc.metrics_of(res), MY_SPEC, tier=tier)   # 3) 按阈值表批量
 `emit / entropy / norm_entropy / tv_distance / topk_by / hits_in / ghost_max /
 bounded / max_jump / span / mean / slope / rate / temp_layers / cleanup / TORCH_OK`。
 
-## 5. 排查
+> 完整教程（SDK / 脚手架 / 打包）在基座仓：
+> <https://github.com/arronJack/pasm-skills/blob/master/docs/TUTORIAL.md>
 
-| 症状 | 原因 | 处理 |
-|---|---|---|
-| `[SKIP] 仓库 core 未找到` | 路径没定到 | 设 `PASM_CORE` 或 `PASM_SKILLS_ROOTS` |
-| 结论全是 `[轻量档]` | 没找到带 torch 的解释器 | 设 `PASM_TORCH_PYTHON` 或 `PASM_PYTHON` |
-| `[WARN] 档位不同·不可比` | 基线与本次解释器不同 | 用 `PASM_PYTHON` 固定解释器后 `regression --update` 重建基线 |
-| `[FAIL] ... 文件被移除` | 真的删了文件 | 看 detail 里的文件名，回核心仓确认 |
-| 场景 `[SKIP] 场景未产出该指标` | 场景代码抛异常 | 加 `--json` 看 `extra`，或直接手跑那段场景代码 |
-
-重建基线（**只在确认当前状态正确时做**）：
-
-```bash
-python -m pasm_skills run regression --update
-```
-
-## 6. 它已经抓到的真问题（为什么值得跑）
+## 九、它已经抓到的真问题（为什么值得跑）
 
 上线首轮就压出 7 个躺在核心或验证器自己的问题：
 
@@ -210,4 +259,4 @@ python -m pasm_skills run regression --update
 MIT © arronZheng（小志）。
 
 - 本技能来源仓（7 个验证智能体 + 3 个产品智能体）：<https://github.com/arronJack/pasm-agents>
-- 基座仓（框架 / SDK / 场景仿真 / 打包工具）：<https://github.com/arronJack/pasm-skills>
+- 基座仓（框架 / SDK / 场景仿真 / 打包工具 / 教程）：<https://github.com/arronJack/pasm-skills>

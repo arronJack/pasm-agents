@@ -1,6 +1,3 @@
-> 本文件是 **pasm-npc 技能 SKILL.md 的正文部分**（不含 frontmatter）。
-> `tools/build_skill.py` 会把它分别拼上两种归档形态的 frontmatter（`zip-root` / `slug-dir`），产出可直接上传的包。
-
 # PASM 游戏 NPC 智能体（pasm-npc）
 
 给游戏装一个**有记忆、有情绪、会被玩家反馈塑形**的 NPC。
@@ -21,6 +18,32 @@ print(npc.mood)                  # 情绪值（注意：是属性，不加括号
 npc.feedback("praise", action="talk")   # 显式夸"talk"这个动作
 npc.save()                       # ~/.pasm-agents/herbalist/
 ```
+
+## 这个技能给你什么
+
+| 能力 | 说明 |
+|---|---|
+| **记忆** | 玩家做过的事逐条入库；重要度 `salience` 分 1/3/5，容量触顶时按「重要度 + 新旧」淘汰 —— 里程碑（"玩家救了我一命"）不会被日常琐事挤掉 |
+| **情绪** | 有随事件变化的情绪值；同一句话在高兴和生气时说出来的不一样 |
+| **动作** | 从动作池里选动作执行，动作池随成长阶段解锁；被夸的动作做得多，被凶的做得少 |
+| **持久化** | 落盘到 `~/.pasm-agents/<agent_id>/`，跨进程自动恢复上次状态 |
+
+**你主要就用这五个方法**：`observe()` 记一件事 · `chat()` 说 · `act()` 做 · `feedback()` 塑形 · `save()` 存。
+
+## 它跑在什么之上：基座 pasm-skills
+
+本技能的内容在 **`pasm-agents`** 仓，但它**依赖基座 `pasm-skills`** ——
+`BaseAgent`（记忆读写 / 情绪 / 动作选择 / 反馈 / 持久化的通用实现）在基座里，
+产品智能体只是在其上定了 persona、动作池和回复模板。
+
+| | 是什么 | 装它 |
+|---|---|---|
+| **pasm-skills**（基座） | 只提供能力，**不含任何智能体** | `pip install pasm-skills` |
+| **pasm-agents**（本技能来源） | 游戏 NPC / 老人陪伴 / 学习陪伴 + 7 个验证智能体 | `pip install pasm-agents` |
+
+> 装 `pasm-agents` 会**自动带上基座**，一条命令搞定。
+> 只装基座时 `python -m pasm_skills list` 显示 0 个智能体 —— 那是刻意的，不是你装错了。
+> 想用基座写自己的智能体：<https://github.com/arronJack/pasm-skills/blob/master/docs/TUTORIAL.md>
 
 ## 什么时候用
 
@@ -43,9 +66,9 @@ npc.save()                       # ~/.pasm-agents/herbalist/
 ## 1. 30 秒上手
 
 ```bash
-git clone https://gitee.com/arronzheng/pasm-agents
-cd pasm-agents
-pip install -e .          # 会自动装上基座 pasm-skills
+pip install pasm-agents                    # 自动带上基座 pasm-skills（推荐）
+# 没有 PyPI 环境时改源码安装：
+#   git clone https://gitee.com/arronzheng/pasm-agents && cd pasm-agents && pip install -e .
 
 pasm-agents demo npc                      # 预置剧本，立刻看到效果
 pasm-agents run npc --id=my_herbalist     # 交互模式
@@ -162,7 +185,7 @@ class Guard(NpcAgent):
 本仓的 `pasm_agents/verifiers/npc_lifelong.py` 是**专门验证这类 NPC 的智能体**：
 跑 90 天 / 270 段经历，断言核心能否正确记忆、里程碑会不会被挤掉、情绪会不会漂、行为会不会僵化。
 
-它压出的真问题已经被修进 `pasm_agents/base.py` 的 `_CoreAdapter` —— **你用的就是修过的版本**。
+它压出的真问题已经被修进 **基座** `pasm_skills/sdk/base.py` 的 `_CoreAdapter` —— **你用的就是修过的版本**。
 
 要查最新问题清单，看 `docs/AGENTS.md`。
 
