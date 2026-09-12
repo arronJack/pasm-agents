@@ -29,8 +29,8 @@ from pathlib import Path
 
 from pasm_skills.agent import Agent, register
 
-def _repo_root() -> Path:
-    """向上找到仓库根（含 `pyproject.toml` 的那层）。
+def _repo_root() -> Path | None:
+    """向上找到仓库根（含 `pyproject.toml` 的那层）；不在源码树里则返回 `None`。
 
     这里**故意不用 `parents[N]`** —— 本文件历史上被搬过一次目录
     （`pasm_agents/verifiers/` → `agents/verifiers/<name>/`），
@@ -42,10 +42,27 @@ def _repo_root() -> Path:
     for parent in here.parents:
         if (parent / "pyproject.toml").is_file():
             return parent
-    return here.parents[2]                # 兜底：实在找不到就用老口径
+    return None
 
 
-BASELINE_DIR = _repo_root() / "baselines"
+def _baseline_dir() -> Path:
+    """基线落点。
+
+    源码树里（能找到 `pyproject.toml`）→ `<repo>/baselines/`，
+    与入库的基线同一处，人与人之间可比。
+
+    已安装（`pip install pasm-agents`，包里不含源码树）→ 落到用户目录。
+    **绝不往 site-packages 里写**：那是安装区（可能只读），写进去既污染环境，
+    又与仓库里入库的基线彻底脱节 —— 用户却会看到「首次运行：已建立基线」，
+    以为自己有基线，实际跟维护者那份毫无关系。
+    """
+    root = _repo_root()
+    if root is not None:
+        return root / "baselines"
+    return Path.home() / ".pasm-agents" / "baselines"
+
+
+BASELINE_DIR = _baseline_dir()
 
 #: 记录解释器档位的小片段，拼进两段指纹代码里
 TIER_CODE = r"""
@@ -173,6 +190,12 @@ class RegressionAgent(Agent):
                 self.ok("基线已刷新", str(path))
             else:
                 self.ok("首次运行：已建立基线", str(path))
+                if _repo_root() is None:
+                    self.warn(
+                        "不在源码树内，基线只对本机有效",
+                        "已安装模式的基线写在用户目录，与仓库里入库的基线不是同一份；"
+                        "要与维护者/队友的基线比对，请在 git clone 出来的目录里跑本智能体",
+                    )
             self.extra = {"baseline": str(path), "created": True,
                           "python": snapshot["core"].get("python"),
                           "torch": snapshot["core"].get("torch")}
