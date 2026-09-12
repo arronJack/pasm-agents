@@ -133,7 +133,9 @@ def check_agent_names(problems: list) -> None:
         import pasm_agents.verifiers  # noqa: F401
         from pasm_skills.agent import names
     except Exception as ex:                          # noqa: BLE001
-        problems.append("无法加载注册表（%s）—— 检查 PYTHONPATH 是否含基座仓" % ex)
+        problems.append(
+            "无法加载注册表（%s）—— 检查 PYTHONPATH 是否**同时**含基座仓与本仓"
+            "（两个都要在，缺本仓时智能体注册表就是空的）" % ex)
         return
     registered = set(names())
     for path, text in iter_bodies():

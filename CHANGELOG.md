@@ -29,6 +29,19 @@
 
 顺带把兜底从"猜一个路径"改成返回 `None` —— 猜错了比直说找不到更危险。
 
+### 修复 —— 验证智能体的 `run.py` 在纯源码模式下跑不起来
+
+README 承诺「每个智能体自己文件夹里就有可跑示例」，但 7 个 `run.py` 只设了
+`PASM_SKILLS_AGENT_MODULES`（让基座发现本仓的智能体），**没保证基座本身能被 import**
+→ `git clone` 之后直接跑会报 `No module named 'pasm_skills'`。
+（同目录的 `quickstart.py` 有完整引导，所以只有 `run.py` 断。）
+
+现在 `run.py` 会把本仓与同级 `pasm-skills` 一起放进 `PYTHONPATH`；
+两条路都走不通时直接打印修复指引，而不是抛一个 `ImportError` 让用户猜。
+
+> 另修 `tools/check_skill_docs.py` 的提示文案：它只说"检查 PYTHONPATH 是否含基座仓"，
+> 但实际最常见的缺法是**缺本仓** —— 文案改成"两个仓都要在"。
+
 > 本次**没有改任何技能正文**，4 个技能包内容与已发布版本逐字一致
 > （仅 frontmatter 的 `version` 随版本号走），**无需重新上传平台**。
 
