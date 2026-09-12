@@ -57,9 +57,9 @@ for med in comp.due_medication(now_hour=8):
 ## 1. 30 秒上手
 
 ```bash
-git clone https://gitee.com/arronzheng/pasm-skills
-cd pasm-skills
-pip install -e .
+git clone https://gitee.com/arronzheng/pasm-agents
+cd pasm-agents
+pip install -e .          # 会自动装上基座 pasm-skills
 
 pasm-agents demo companion                    # 预置剧本（陈秀兰 30 天）
 pasm-agents run companion --id=my_companion   # 交互模式
@@ -169,7 +169,7 @@ pasm-agents run companion --id=my_companion --persona-file=personas/chenxiulan.j
 
 | tier | 含义 | 何时启用 |
 |---|---|---|
-| `bionic` | 仿生：完整 PASM 核心 + emotion 模块（需 torch） | `pip install pasm-skills[torch]` |
+| `bionic` | 仿生：完整 PASM 核心 + emotion 模块（需 torch） | `pip install pasm-agents[torch]` |
 | `core`    | 完整：PASM 核心（memory + learning，无 torch） | `PASM_PYTHON` 指向带核心的 Python |
 | `light`   | 轻量：纯内置（重要度淘汰 + 字面检索 + softmax 权重） | 任何机器 |
 

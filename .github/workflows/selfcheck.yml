@@ -67,3 +67,7 @@ jobs:
 
       - name: 技能包构建 + 结构自检
         run: python tools/build_skill.py --zip --clean
+
+      - name: 技能正文与仓库现状一致性
+        # 防止"改了结构忘了改文档"——这类问题代码全绿但用户照做跑不动
+        run: python tools/check_skill_docs.py

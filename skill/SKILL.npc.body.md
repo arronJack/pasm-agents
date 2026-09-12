@@ -43,9 +43,9 @@ npc.save()                       # ~/.pasm-agents/herbalist/
 ## 1. 30 秒上手
 
 ```bash
-git clone https://gitee.com/arronzheng/pasm-skills
-cd pasm-skills
-pip install -e .
+git clone https://gitee.com/arronzheng/pasm-agents
+cd pasm-agents
+pip install -e .          # 会自动装上基座 pasm-skills
 
 pasm-agents demo npc                      # 预置剧本，立刻看到效果
 pasm-agents run npc --id=my_herbalist     # 交互模式
@@ -133,7 +133,7 @@ pasm-agents run npc --id=my_herbalist --persona-file=personas/herbalist.json
 
 | tier | 含义 | 何时启用 |
 |---|---|---|
-| `bionic` | 仿生：完整 PASM 核心 + emotion 模块（需 torch） | `pip install pasm-skills[torch]` |
+| `bionic` | 仿生：完整 PASM 核心 + emotion 模块（需 torch） | `pip install pasm-agents[torch]` |
 | `core`    | 完整：PASM 核心（memory + learning，无 torch） | `PASM_PYTHON` 指向带核心的 Python |
 | `light`   | 轻量：纯内置（重要度淘汰 + 字面检索 + softmax 权重） | 任何机器 |
 

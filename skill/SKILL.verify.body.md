@@ -24,19 +24,43 @@
    这个档位要**写进每一条结论**，不许在暗处换实现。
 5. **只读**。校验绝不修改被检查的仓库，只写自己的 `baselines/`。
 
+## 0.5 两个仓的分工（**先看这一节，否则命令会跑不动**）
+
+框架和智能体是**两个仓**：
+
+| 仓 | 内容 | 装它 |
+|---|---|---|
+| **pasm-skills**（基座） | `pasm_skills` 包：`Agent` 基类与注册表、`RepoContext` 隔离探测、`scenarios` 场景仿真、`checks` 检查工具箱 | `pip install pasm-skills` |
+| **pasm-agents**（本技能的来源） | `pasm_agents.verifiers`：**本文说的这 7 个验证智能体** + 3 个产品智能体 | `pip install pasm-agents` |
+
+> ⚠️ **只装基座是跑不出验证结果的** —— 基座不内置任何智能体，
+> `python -m pasm_skills list` 会显示 **0 个**，这是刻意设计。
+> 装上 `pasm-agents` 后，7 个验证智能体会**自动出现**（通过 entry point 注册，基座不需要改一行代码）。
+
 ## 1. 装上并定位
 
 ```bash
-git clone https://github.com/arronJack/pasm-skills.git
-cd pasm-skills
-python -m pasm_skills list          # 看三仓定位 + 智能体清单
+pip install pasm-agents            # 自动带上基座 pasm-skills
+
+python -m pasm_skills list         # 应看到 7 个验证智能体 + 三仓定位
+python -m pasm_skills agents       # 排障用：报告智能体是从哪加载进来的
 ```
 
-装成命令也行：
+CLI 也有短名（装了基座就有）：
 
 ```bash
-pip install -e .
 pasm-skills list
+pasm-skills run core-verifier
+```
+
+**没有 PyPI 环境时**（纯源码跑）——两仓都要在路径上：
+
+```bash
+git clone https://github.com/arronJack/pasm-skills.git
+git clone https://github.com/arronJack/pasm-agents.git
+export PYTHONPATH="$PWD/pasm-skills:$PWD/pasm-agents"
+export PASM_SKILLS_AGENT_MODULES=pasm_agents.verifiers   # 替代 entry point
+python -m pasm_skills list
 ```
 
 被检查的三个仓默认按约定路径找，也可显式指定：
@@ -56,6 +80,8 @@ export PASM_TORCH_PYTHON=/path/to/python  # 指定"带 torch"的解释器，优�
 ```
 
 不设时，框架会自己挑一个能 `import torch` 的解释器；挑不到就降级轻量档并如实标注。
+（也可以写仓库外的本机配置 `~/.pasm-skills/local.json`。）
+
 
 ## 2. 跑什么
 
@@ -181,4 +207,7 @@ python -m pasm_skills run regression --update
 
 ## License
 
-MIT © arronZheng（小志）。仓库：<https://github.com/arronJack/pasm-skills>
+MIT © arronZheng（小志）。
+
+- 本技能来源仓（7 个验证智能体 + 3 个产品智能体）：<https://github.com/arronJack/pasm-agents>
+- 基座仓（框架 / SDK / 场景仿真 / 打包工具）：<https://github.com/arronJack/pasm-skills>

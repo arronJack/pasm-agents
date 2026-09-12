@@ -46,9 +46,9 @@ print(t.snapshot())           # 学情结构（纯 JSON，画像层可直接消�
 ## 1. 30 秒上手
 
 ```bash
-git clone https://gitee.com/arronzheng/pasm-skills
-cd pasm-skills
-pip install -e .
+git clone https://gitee.com/arronzheng/pasm-agents
+cd pasm-agents
+pip install -e .          # 会自动装上基座 pasm-skills
 
 pasm-agents demo tutor                 # 预置剧本（小雅 30 天 × 4 题）
 pasm-agents run tutor --id=my_tutor    # 交互模式
@@ -140,7 +140,7 @@ pasm-agents run tutor --id=my_tutor --persona-file=personas/xiaoya.json
 
 | tier | 含义 | 何时启用 |
 |---|---|---|
-| `bionic` | 仿生：完整 PASM 核心 + emotion 模块（需 torch） | `pip install pasm-skills[torch]` |
+| `bionic` | 仿生：完整 PASM 核心 + emotion 模块（需 torch） | `pip install pasm-agents[torch]` |
 | `core`    | 完整：PASM 核心（memory + learning，无 torch） | `PASM_PYTHON` 指向带核心的 Python |
 | `light`   | 轻量：纯内置（重要度淘汰 + 字面检索 + softmax 权重） | 任何机器 |
 
