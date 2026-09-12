@@ -35,8 +35,10 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
 
-      - name: 装基座（PyPI 尚未发布，从公开仓装）
-        run: pip install "pasm-skills @ git+https://github.com/arronJack/pasm-skills.git"
+      # 从 PyPI 装基座 —— 与用户实际的安装路径完全一致。
+      # ⚠️ 基座发新版后要同步发到 PyPI，否则这里装的仍是旧版（CI 会滞后）。
+      - name: 装基座（走 PyPI，与用户装法一致）
+        run: pip install pasm-skills
 
       - name: 装本仓
         run: pip install -e .
