@@ -1,5 +1,5 @@
 {
-  "collected_at": "2026-09-14 16:35:11",
+  "collected_at": "2026-09-14 16:44:22",
   "core": {
     "cognitive": {
       "__init__.py": "9e56ca67841a9306",
@@ -9,7 +9,7 @@
       "facts.py": "a42f98dae7c5ab3c",
       "learning.py": "3b9a0019308d74ba",
       "mathlab.py": "ac034da5ffe65f0b",
-      "memory_layers.py": "7bec6af3d680955a",
+      "memory_layers.py": "ce0619e4b304b3ba",
       "memrouter.py": "f641b4d7225a3db4",
       "memvec.py": "02820fa794751bbe",
       "percept.py": "898e7f488fd05be5",
@@ -17,7 +17,7 @@
       "selfheal.py": "dae9d7cb489405a4",
       "symbolic.py": "78654ad348fa377a",
       "workctx.py": "c8d0309fa78027f4",
-      "worldmodel.py": "11f5fde4d297d456"
+      "worldmodel.py": "485a4e86ed235b5f"
     },
     "envs": {
       "__init__.py": "abdc9206f37ef70f",
