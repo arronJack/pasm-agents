@@ -18,6 +18,26 @@
 
 ---
 
+## 〇、PASM 生态索引（六仓同频）
+
+| 仓 | 角色 | 可见性 | 版本 |
+|---|---|---|---|
+| `pasm-skills` | 基座：`BaseAgent` + 认知能力层 | 公开 | 0.5.0 |
+| **`pasm-agents`（本仓）** | **成品智能体集** | 公开 | **0.4.5** |
+| `pasm-mcp-server` | MCP 接入层：给任意 AI 客户端装长期记忆 | 公开 | 0.2.0 |
+| `PASM-Lite` | 教学版 + 认知引擎接口 | 公开 | — |
+| `PASM` | 核心引擎（七层仿生 / 世界模型） | **私有** | 0.7.1 |
+| `pasm-qclaw` | 桌面应用发行通道 | 公开 | 0.29.1 |
+
+地址：
+[Gitee](https://gitee.com/arronzheng/pasm-agents) ·
+[GitHub](https://github.com/arronJack/pasm-agents)
+
+> **0.4.5 起依赖 `pasm-skills>=0.5.0`**：本仓智能体自动获得认知能力层
+> （语义检索 / 遗忘曲线 / 记忆巩固 / 焦点栈），无需改代码 —— 基座升级，智能体受益。
+
+---
+
 ## 一、产品智能体
 
 ### ① 游戏 NPC（`NpcAgent`）
