@@ -1,21 +1,23 @@
 {
-  "collected_at": "2026-09-14 15:13:18",
+  "collected_at": "2026-09-14 15:59:14",
   "core": {
     "cognitive": {
-      "__init__.py": "389fc42e27f63879",
+      "__init__.py": "9e56ca67841a9306",
       "agent_team.py": "ddbefac6a6b04597",
       "coder.py": "3d23790df9e0c832",
       "cog.py": "d0f0e4366c5db3aa",
+      "facts.py": "2eee82cd6385060b",
       "learning.py": "3b9a0019308d74ba",
       "mathlab.py": "ac034da5ffe65f0b",
-      "memory_layers.py": "b61d1cc8bd6afeeb",
-      "memrouter.py": "135269e62ffb101e",
-      "memvec.py": "09a90ab13b1fc164",
+      "memory_layers.py": "7bec6af3d680955a",
+      "memrouter.py": "f641b4d7225a3db4",
+      "memvec.py": "02820fa794751bbe",
       "percept.py": "898e7f488fd05be5",
       "quantum.py": "5b1a1002952e433f",
       "selfheal.py": "dae9d7cb489405a4",
       "symbolic.py": "78654ad348fa377a",
-      "workctx.py": "c8d0309fa78027f4"
+      "workctx.py": "c8d0309fa78027f4",
+      "worldmodel.py": "11f5fde4d297d456"
     },
     "envs": {
       "__init__.py": "abdc9206f37ef70f",
