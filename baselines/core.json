@@ -1,12 +1,12 @@
 {
-  "collected_at": "2026-09-14 15:59:14",
+  "collected_at": "2026-09-14 16:35:11",
   "core": {
     "cognitive": {
       "__init__.py": "9e56ca67841a9306",
       "agent_team.py": "ddbefac6a6b04597",
       "coder.py": "3d23790df9e0c832",
       "cog.py": "d0f0e4366c5db3aa",
-      "facts.py": "2eee82cd6385060b",
+      "facts.py": "a42f98dae7c5ab3c",
       "learning.py": "3b9a0019308d74ba",
       "mathlab.py": "ac034da5ffe65f0b",
       "memory_layers.py": "7bec6af3d680955a",
