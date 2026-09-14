@@ -34,7 +34,7 @@ from .npc import NpcAgent, NPC_ACTIONS, NPC_PERSONA_TEMPLATE
 from .companion import ElderlyCompanion, CRISIS_KEYWORDS
 from .tutor import LearningTutor
 
-__version__ = "0.4.3"
+__version__ = "0.4.4"
 __all__ = [
     "BaseAgent", "AgentState", "NpcAgent", "ElderlyCompanion", "LearningTutor",
     "NPC_ACTIONS", "NPC_PERSONA_TEMPLATE", "CRISIS_KEYWORDS",
