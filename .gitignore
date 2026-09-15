@@ -23,3 +23,6 @@ Thumbs.db
 
 # 运行产物（不是基线；基线是 core.json，要入库）
 baselines/last-run.json
+
+# 本机一次性修补产物，不进版本库
+_patch_backup/
