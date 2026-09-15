@@ -105,7 +105,7 @@ class ElderlyCompanion(BaseAgent):
         tone = p.get("tone", "温和")
 
         # 1. 关键事实直查 —— 用户问"我叫什么"/"我吃什么药"等
-        label_q = _label_query(text)
+        label_q = _label_query(text, labels=self.fact_labels)
         if label_q:
             hit = self._find_fact(label_q)
             if hit:
@@ -182,6 +182,16 @@ class ElderlyCompanion(BaseAgent):
 
     # ------- 内部工具 --------------------------------------------
 
+    @property
+    def fact_labels(self) -> List[str]:
+        """persona 里实际存在的关键事实标签（供直查与自定义标签命中用）。"""
+        out: List[str] = []
+        for f in self.persona.get("key_facts") or []:
+            lab = f.get("label")
+            if lab and lab not in out:
+                out.append(lab)
+        return out
+
     def _find_fact(self, label: str) -> Optional[Dict[str, Any]]:
         """按标签精确检索关键事实（最高优先级检索路径）。"""
         for f in self.persona.get("key_facts") or []:
@@ -193,16 +203,117 @@ class ElderlyCompanion(BaseAgent):
 # ============================================================ 工具
 
 
-def _label_query(text: str) -> Optional[str]:
-    """把自然语言里的"我吃什么药 / 我叫什么 / 谁给我打电话"翻成标签。"""
-    if re.search(r"(吃什么药|什么药|药品|用药)", text):
-        return "用药"
-    if re.search(r"(过敏|不能吃什么)", text):
-        return "过敏"
-    if re.search(r"(家人|孩子|女儿|儿子|儿子|谁给我)", text):
-        return "家人"
-    if re.search(r"(我叫什么|我的名字|谁是我|多大)", text):
-        return "本人"
+#: 口语 → 标签 的别名表。老人**真实说话**用词散，而标签直查是"确定性命中"，
+#: 所以这里必须按"老人会怎么说"来列，而不是按"标签长什么样"来列。
+#:
+#: **匹配顺序即优先级，且顺序是刻意排的**：``过敏 > 用药 > 家人 > 本人``。
+#: 为什么 `过敏` 必须排在 `用药` 前面：「我对什么药过敏」这句话**同时**含
+#: 用药词（什么药）与过敏词（过敏）；按"先命中先赢"，若用药在前，
+#: 老人问过敏会被答成用药事实 —— 这类歧义不是理论问题，是探针里真会出现的一条。
+#:
+#: **值是字面串，不是正则**（v0.4.6 起）。原因：正则表里 `儿子|儿子` 这种重复项
+#: 一旦写进去没人看得出来（`儿子|儿子` 与 `儿子` 等价），而字面表可以用
+#: `len(pats) == len(set(pats))` 机械查重；`in` 匹配也更快、没有转义坑。
+#:
+#: 要加方言 / 地区说法，两条路：
+#:   ① 改这里（内置词表）；
+#:   ② `pasm_agents.register_label_aliases({"家人": ("屋里的",)})` —— 运行时加，不必改源码。
+#: 另有一条零配置通路：`persona.key_facts` 里**自定义标签**（≥2 字，如「糖尿病」「血压」）
+#: 在问句里原样出现时也会被直接命中。
+LABEL_ALIASES: Dict[str, tuple] = {
+    "过敏": (
+        "过敏", "不能吃", "不能碰", "不能入口", "忌口", "忌嘴",
+        "吃了难受", "吃了不舒服", "不耐受",
+        # 老人问过敏常绕开"过敏"二字，用"会不舒服/不敢吃"这类迂回说法。
+        # 刻意只收"会不舒服 / 会难受"这种**带前导词**的形态，
+        # 不收光杆"不舒服""难受" —— 那会把"我今天身体不舒服"判成过敏。
+        "会不舒服", "会难受", "吃不得", "不敢吃", "不良反应",
+    ),
+    "用药": (
+        "药", "吃药", "服药", "用药", "吃的药", "吃什么药", "什么药",
+        "药品", "药物", "药片", "药丸", "几粒", "吃几片", "吃几次",
+        "几点吃药", "降压药", "降糖药",
+    ),
+    "家人": (
+        "家人", "家里", "家庭", "亲人", "亲属", "亲戚",
+        "孩子", "娃", "儿女", "子女", "闺女", "姑娘", "女儿", "儿子",
+        "孙子", "孙女", "外孙", "老伴", "老头", "老公", "老婆", "老太婆",
+        "媳妇", "儿媳", "女婿", "兄弟", "姐妹", "爹", "娘", "妈", "爸",
+        "谁给我", "谁会来", "谁来看我", "谁会来看我", "看望我", "谁回来",
+        "什么时候回来", "来看我",
+    ),
+    "本人": (
+        "我叫什么", "我的名字", "我叫啥", "叫啥", "我姓", "姓什么",
+        "谁是我", "我是谁", "多大", "几岁", "多少岁", "年龄", "年纪",
+        "生日", "住哪", "住在哪", "住址", "地址", "老家", "哪里人",
+    ),
+}
+
+
+def register_label_aliases(
+    mapping: Dict[str, Any], *, prepend: bool = True,
+) -> Dict[str, tuple]:
+    """运行时扩充「口语 → 标签」别名表（加方言 / 地区说法**不必改源码**）。
+
+    :param mapping: ``{标签: 说法}``；值可以是单个字符串或字符串序列，
+        标签可以是四个内置标签之一（扩说法），也可以是**全新的标签名**。
+    :param prepend: ``True``（默认）时新规则优先于内置规则；``False`` 时只作补充。
+    :return: 合并后的别名表。
+
+    刻意**就地更新** ``LABEL_ALIASES``（``clear()`` + ``update()``）而不是重新绑定新 dict：
+    本模块被 `pasm_agents/__init__.py` 按名字导入，一旦重新绑定，外面拿到的还是旧表 ——
+    这正是 PASM 踩过的"属性拷贝式分叉"（见 `tools/check_core_fork.py` 的分叉铁律）。
+
+    用法::
+
+        from pasm_agents import register_label_aliases
+        register_label_aliases({"家人": ("屋里的", "俺家那口子")})   # 方言
+    """
+    incoming: Dict[str, tuple] = {}
+    for lab, terms in mapping.items():
+        if isinstance(terms, str):
+            terms = (terms,)
+        incoming[str(lab)] = tuple(str(t) for t in terms)
+
+    merged: Dict[str, tuple] = {}
+    if prepend:
+        for lab, terms in incoming.items():
+            merged[lab] = tuple(dict.fromkeys(terms))
+        for lab, terms in LABEL_ALIASES.items():
+            merged[lab] = tuple(dict.fromkeys(tuple(merged.get(lab, ())) + tuple(terms)))
+    else:
+        for lab, terms in LABEL_ALIASES.items():
+            merged[lab] = tuple(terms)
+        for lab, terms in incoming.items():
+            merged[lab] = tuple(dict.fromkeys(tuple(merged.get(lab, ())) + terms))
+
+    LABEL_ALIASES.clear()
+    LABEL_ALIASES.update(merged)
+    return LABEL_ALIASES
+
+
+#: 只为了把空白（含全角空格）抹掉再匹配 —— 老人打字/语音转写常带空格。
+_WS_RE = re.compile(r"[\s\u3000]+")
+
+
+def _label_query(text: str, labels: Optional[List[str]] = None) -> Optional[str]:
+    """把自然语言里的"我吃什么药 / 我叫什么 / 谁给我打电话"翻成标签。
+
+    :param labels: 本次 persona 实际存在的标签，用于零配置命中自定义标签
+        （如「糖尿病」）。文本里原样出现 ≥2 字的标签名即视为命中。
+    """
+    s = _WS_RE.sub("", text or "")
+    if not s:
+        return None
+    # 0) persona 自定义标签原样出现 —— 让用户自己起的名也能直查
+    for lab in labels or []:
+        if lab and len(str(lab)) >= 2 and str(lab) in s:
+            return str(lab)
+    # 1) 内置别名表：按"老人会怎么说"匹配（字面包含，顺序即优先级）
+    for lab, terms in LABEL_ALIASES.items():
+        for term in terms:
+            if term and term in s:
+                return lab
     return None
 
 

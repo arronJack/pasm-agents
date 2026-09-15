@@ -7,11 +7,15 @@ from __future__ import annotations
 from .agent import (  # noqa: F401
     ElderlyCompanion,
     CRISIS_KEYWORDS,
+    LABEL_ALIASES,
     random_kind,
+    register_label_aliases,
 )
 
 __all__ = [
     "ElderlyCompanion",
     "CRISIS_KEYWORDS",
+    "LABEL_ALIASES",
     "random_kind",
+    "register_label_aliases",
 ]

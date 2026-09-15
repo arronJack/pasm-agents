@@ -31,13 +31,16 @@ from pasm_skills.sdk import (  # 基座仓提供
     BaseAgent, AgentState, _now, _core_available, _torch_available,
 )
 from .npc import NpcAgent, NPC_ACTIONS, NPC_PERSONA_TEMPLATE
-from .companion import ElderlyCompanion, CRISIS_KEYWORDS
+from .companion import (
+    ElderlyCompanion, CRISIS_KEYWORDS, LABEL_ALIASES, register_label_aliases,
+)
 from .tutor import LearningTutor
 
-__version__ = "0.4.5"
+__version__ = "0.4.6"
 __all__ = [
     "BaseAgent", "AgentState", "NpcAgent", "ElderlyCompanion", "LearningTutor",
-    "NPC_ACTIONS", "NPC_PERSONA_TEMPLATE", "CRISIS_KEYWORDS",
+    "NPC_ACTIONS", "NPC_PERSONA_TEMPLATE", "CRISIS_KEYWORDS", "LABEL_ALIASES",
+    "register_label_aliases",
     "_core_available", "_torch_available",
 ]
 
