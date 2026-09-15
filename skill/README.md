@@ -52,11 +52,14 @@ skill/SKILL.<name>.body.md        正文（本目录，不含 frontmatter）
 3. 打包并自检：
    ```bash
    python tools/build_skill.py --zip --clean
-   python -c "import zipfile,glob,os;[print(os.path.basename(z), zipfile.ZipFile(z).namelist()) for z in sorted(glob.glob('E:/AI/pasm-agents-dist/*.zip'))]"
+   # 校验产物（默认落在本仓的兄弟目录 <仓的父目录>/pasm-agents-dist/）
+   python -c "import glob,os,zipfile,sys; d=os.path.join(os.path.dirname(os.getcwd()),'pasm-agents-dist'); [print(os.path.basename(z), zipfile.ZipFile(z).namelist()) for z in sorted(glob.glob(os.path.join(d,'*.zip')))]"
    # 每个都期望 ['SKILL.md']
    ```
 
 ## 打包产物去哪
 
-`E:/AI/pasm-agents-dist/`（在仓库外）：`zip-root/<name>/SKILL.md`、`slug-dir/<name>/SKILL.md`
-与根目录下的 ZIP。上传步骤见该目录下的 `UPLOAD-CHECKLIST.md`。
+`<仓的父目录>/pasm-agents-dist/`（在仓库外，即与 `pasm-agents` 同级）：
+`zip-root/<name>/SKILL.md`、`slug-dir/<name>/SKILL.md` 与根目录下的 ZIP。
+路径由 `pasm_skills.build.build_all()` 推导（`root.parent / "<仓名>-dist"`），**不写死盘符**。
+上传步骤见该目录下的 `UPLOAD-CHECKLIST.md`。
