@@ -36,7 +36,7 @@ from .companion import (
 )
 from .tutor import LearningTutor
 
-__version__ = "0.4.6"
+__version__ = "0.4.7"
 __all__ = [
     "BaseAgent", "AgentState", "NpcAgent", "ElderlyCompanion", "LearningTutor",
     "NPC_ACTIONS", "NPC_PERSONA_TEMPLATE", "CRISIS_KEYWORDS", "LABEL_ALIASES",

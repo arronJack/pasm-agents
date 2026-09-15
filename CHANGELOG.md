@@ -2,6 +2,28 @@
 
 本项目遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.4.7] — 2026-09-15
+
+### 修复 —— 护栏命令 pip 用户跑不了（文档教了一条用户自己没有的命令）
+
+0.4.6 在技能正文里写"回归护栏：`python tools/selftest_companion.py`"，
+但**正文推荐的安装方式是 `pip install pasm-agents`，而 wheel 不含 `tools/`**
+（`packages.find` 的 `include` 只收 `pasm_agents*` 与 `agents*`）。
+结果就是：源码仓用户跑得通，**照文档做的 pip 用户根本没有这个文件** ——
+和本仓 `tools/check_skill_docs.py` 要防的"文档与结构脱节"是同一类问题。
+
+**修复**：把护栏实现搬进包内，两种用户都能跑。
+
+- 新增 `pasm_agents/selftest_companion.py`（实现），进 wheel；
+- `tools/selftest_companion.py` 保留为**薄壳**（`sys.path` 注入 + 转发），
+  源码仓的既有命令与 CI 不受影响；
+- 技能正文改推荐 `python -m pasm_agents.selftest_companion`，
+  并如实说明"改别名表静默失效不会有其他测试报错"。
+
+### 变更
+
+- 版本 0.4.6 -> 0.4.7（0.4.6 已上 PyPI，内容不可覆盖）。
+
 ## [0.4.6] — 2026-09-15
 
 ### 修复 —— 老人口语问「我家里人呢」答不出（真机 19/21 的那两条 FAIL）
