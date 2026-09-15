@@ -27,6 +27,7 @@
 from __future__ import annotations
 
 import random
+import time
 from typing import Any, Dict, List, Optional
 
 from pasm_skills.sdk import BaseAgent
@@ -36,6 +37,22 @@ from pasm_skills.sdk import BaseAgent
 DEFAULT_TOPICS: List[str] = [
     "分数加减", "面积计算", "行程问题", "鸡兔同笼", "质因数分解", "图形对称",
 ]
+
+
+#: 「这道题我做不出来」的说法。刻意**不含光杆「难」** ——
+#: 「我今天很难过 / 心里难受」是情绪不是学业，原先会答成"先做 3 道分数加减"。
+#: 判定不了就落到默认分支（**无法判定 = 放行**），不硬猜。
+_STUCK_WORDS: tuple = (
+    "不会", "搞不懂", "听不懂", "没听懂", "不明白", "没明白",
+    "太难", "好难", "难死", "做不出", "算不出", "写不出",
+    "又错了", "老是错", "总错",
+)
+
+#: 「我学会了」的说法。刻意**不含「OK」** —— 那是个两字母串，
+#: 会命中任何含 OK 的文本（"OK 那我们开始吧"不该算"学会了"）。
+_GOT_IT_WORDS: tuple = (
+    "懂了", "会了", "明白了", "学会了", "搞懂了", "知道怎么做了",
+)
 
 
 class LearningTutor(BaseAgent):
@@ -153,8 +170,9 @@ class LearningTutor(BaseAgent):
         ks = self.state.notes.get("knowledge_state") or {}
         wm = ks.get(weakest, 0)
 
-        # 学生在抱怨 → 先安抚 + 给个具体下一步
-        if any(k in text for k in ("难", "不会", "搞不懂", "烦")):
+        # 学生在抱怨"做不出来" → 先安抚 + 给个具体下一步
+        # （触发词见 _STUCK_WORDS：必须指向题目，不能是光杆「难」）
+        if any(k in text for k in _STUCK_WORDS):
             return (
                 f"别急，{name}～咱们一点点来。"
                 f"要不今天先做 3 道「{weakest}」？"
@@ -162,7 +180,8 @@ class LearningTutor(BaseAgent):
             )
 
         # 学生说"懂了/会了" → 鼓励 + 推荐巩固
-        if any(k in text for k in ("懂了", "会了", "明白了", "OK")):
+        # （触发词见 _GOT_IT_WORDS：刻意不收两字母串「OK」）
+        if any(k in text for k in _GOT_IT_WORDS):
             return f"太棒了！要不要再练两道「{weakest}」巩固一下？"
 
         # 学生问"我哪里不行" → 直接说最弱项
@@ -174,6 +193,3 @@ class LearningTutor(BaseAgent):
             f"好的，咱们接着来。"
             f"今天聚焦「{weakest}」怎么样？"
         )
-
-
-import time  # noqa: E402  末尾 import 仅为控制 IDE 顺序

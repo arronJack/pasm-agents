@@ -53,7 +53,40 @@ NPC_PERSONA_TEMPLATE: Dict[str, Any] = {
     "energy": 0.5,   # 活跃度
     "play":   0.5,   # 俏皮度
     "tone":   "平和",
+    # 自称（可选）。**留空 = 用中性「我」**。
+    # 老派角色可以写 "老夫" / "老朽" / "本座"；但绝不能把它写成默认值 ——
+    # 那样「卖花的小姑娘」也会说"老朽还记着呢"（人设泄漏，见 selftest_npc）。
+    "self_ref": "",
 }
+
+
+#: 「在问 NPC 是谁」的触发词。**必须专指问身份，别放光杆「名字」进去** ——
+#: 「我名字叫张三 / 这花有名字吗 / 我给你起个名字吧」都不是在问 NPC 是谁，
+#: 而光杆「名字」会把它们全部误判成自我介绍（2026-09-15 探针实测 4/4 误触发）。
+_IDENTITY_QUERIES: tuple = (
+    "你叫什么", "你叫啥", "你叫甚", "你是谁", "你是哪位", "你是什么人",
+    "你的名字", "怎么称呼", "如何称呼",
+)
+
+#: 带这些标签的记忆**不是**"我和玩家共同的经历"，不该被当作"上次那件事"回显。
+#: 「自我介绍」由 :meth:`NpcAgent.bootstrap_event` 写入。
+_NOT_SHARED_TAGS: tuple = ("自我介绍",)
+
+#: 标题带这些前缀的记忆同样不算共同经历 ——
+#: 「对话：」是 :meth:`BaseAgent.chat` 把**玩家刚说的话**自动入库的，
+#: 把两秒前的问话当"上次那件事"念回去，读起来是错位的。
+_NOT_SHARED_TITLE_PREFIXES: tuple = ("对话：",)
+
+
+def _is_shared_memory(f: Dict[str, Any]) -> bool:
+    """这条记忆算不算"我和玩家共同的经历"（决定要不要说"上次……我还记着呢"）。
+
+    ``recall()`` 返回的 fact **不含 category 字段**，所以只能看 tags 与标题前缀。
+    """
+    tags = f.get("tags") or []
+    if any(t in tags for t in _NOT_SHARED_TAGS):
+        return False
+    return not str(f.get("title") or "").startswith(_NOT_SHARED_TITLE_PREFIXES)
 
 
 class NpcAgent(BaseAgent):
@@ -89,7 +122,7 @@ class NpcAgent(BaseAgent):
         return [{
             "title": f"我{'' if p['role'].startswith('是') else '是'}{p['role']}",
             "brief": f"我叫{p['name']}，{p.get('tone','')}。",
-            "tags": ["我", p["name"], p["role"]],
+            "tags": ["我", p["name"], p["role"], "自我介绍"],
             "salience": 3,
             "category": "自我",
         }]
@@ -105,20 +138,29 @@ class NpcAgent(BaseAgent):
         p = self.persona
         name = p["name"]
         role = p["role"]
+        # 自称由 persona 决定；留空用中性「我」
+        self_ref = p.get("self_ref") or "我"
 
-        # 命中了"自我"标签 → 介绍自己
-        if any(k in text for k in ("你叫什么", "你是谁", "你叫啥", "名字")):
+        # 命中了"在问我是谁" → 介绍自己
+        if any(k in text for k in _IDENTITY_QUERIES):
             return f"{name}道：{role}，{p.get('tone','')}。"
 
-        # 命中了"第一次遇见玩家"这种重要记忆 → 表达记得
+        # 命中了"第一次遇见玩家"这类里程碑 → 表达记得
         for f in facts:
-            if f.get("sal", 0) >= 4 and any(t in (f.get("tags") or []) for t in ("玩家", "救命", "重大")):
-                return f"{name}眯起眼：上次{ f.get('brief','')[:16] }，老朽还记着呢。"
+            if not _is_shared_memory(f):
+                continue
+            if f.get("sal", 0) >= 4 and any(
+                t in (f.get("tags") or []) for t in ("玩家", "救命", "重大")
+            ):
+                brief = (f.get("brief") or f.get("title") or "").strip()
+                if brief:
+                    return f"{name}眯起眼：上次{ brief[:16] }，{self_ref}还记着呢。"
 
-        # 命中任何事 → 提及
-        if facts:
-            top = facts[0]
-            brief = top.get("brief") or top.get("title") or ""
+        # 命中任何**共同经历** → 提及
+        for f in facts:
+            if not _is_shared_memory(f):
+                continue
+            brief = (f.get("brief") or f.get("title") or "").strip()
             if brief:
                 return f"{name}点头道：{ brief[:24] }，记得。"
 
@@ -132,7 +174,9 @@ class NpcAgent(BaseAgent):
 
         # 兜底句
         defaults = [
-            f"……这事{role}我也说不准。",
+            # 用 self_ref 而不是 role：`……这事{role}我也说不准` 会读成
+            # 「这事卖花的小姑娘我也说不准」，句子是拧的。
+            f"……这事{self_ref}也说不准。",
             f"你问这个啊，让我想想……",
             f"（摆摆手）下次再说吧。",
         ]

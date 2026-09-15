@@ -12,6 +12,7 @@
 
 ``pasm-agents inspect <id>``     打印某 agent 的当前快照
 ``pasm-agents list``             列出本机全部 agent
+``pasm-agents selftest [which]`` 跑产品智能体的自测护栏（默认全跑，退出码 0/1）
 """
 
 from __future__ import annotations
@@ -237,6 +238,33 @@ def _kind_to_class(kind: str):
     return None
 
 
+def run_selftests(which: str = "all") -> int:
+    """跑产品智能体的自测护栏（零 LLM、零网络、秒级出结果）。
+
+    为什么放进 CLI：这些护栏盯的是**产品层契约** —— 口语直查、触发边界、
+    人设不泄漏。底层记忆层的 30 天验证器（``agents/verifiers/*``）测不到它们：
+    把别名表改坏、把触发词放宽，记忆引擎照样全绿。
+    只有"一条命令在本地立刻能跑"，护栏才会被真的跑。
+    """
+    import importlib
+
+    mods = {
+        "npc": "pasm_agents.selftest_npc",
+        "companion": "pasm_agents.selftest_companion",
+        "tutor": "pasm_agents.selftest_tutor",
+    }
+    picked = list(mods) if which == "all" else [which]
+    rc = 0
+    for name in picked:
+        print(f"\n{'#' * 64}\n# selftest: {name}\n{'#' * 64}")
+        try:
+            rc |= int(importlib.import_module(mods[name]).main())
+        except Exception as exc:                       # 护栏本身跑不起来也算失败
+            print(f"[FAIL] {name} selftest 无法运行：{type(exc).__name__}: {exc}")
+            rc = 1
+    return rc
+
+
 # ============================================================ main
 
 
@@ -253,6 +281,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     run.add_argument("--persona-file", default=None)
 
     sub.add_parser("list", help="列出本机全部 agent")
+    sel = sub.add_parser("selftest", help="跑产品智能体的自测护栏（零网络，秒级）")
+    sel.add_argument("which", nargs="?", default="all",
+                     choices=["all", "npc", "companion", "tutor"])
     insp = sub.add_parser("inspect", help="查看 agent 快照")
     insp.add_argument("id")
 
@@ -265,6 +296,8 @@ def main(argv: Optional[List[str]] = None) -> int:
         return list_agents()
     if args.cmd == "inspect":
         return inspect_agent(args.id)
+    if args.cmd == "selftest":
+        return run_selftests(args.which)
     return 1
 
 
