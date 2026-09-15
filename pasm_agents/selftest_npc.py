@@ -36,7 +36,14 @@ for _s in (sys.stdout, sys.stderr):          # Windows 控制台默认 gbk，中
 # 落盘位置由 SDK 固定为 ~/.pasm-agents/<agent_id>，没有环境变量开关。
 # 用专用 id 并在开跑前清掉残留，否则上一轮的情绪/记忆会带进本轮，断言就变成"看运气"。
 _AGENT_ID = "selftest_npc"
-shutil.rmtree(Path.home() / ".pasm-agents" / _AGENT_ID, ignore_errors=True)
+
+#: 本自检共用到 5 个 id（`_AGENT_ID` 及其 `_ref/_brief/_fresh/_real` 变体）。
+#: **必须整族清掉**，只清基础 id 是不够的 —— 变体目录的残留会改变召回排序，
+#: 于是同一个 wheel 在不同机器/同一机器连跑两次会给出不同结论
+#: （2026-09-15 实测：pip 装出的包 9/12 → 10/12 → 清干净后稳定 12/12）。
+#: 护栏不可重复 = 比没有护栏更坏：它会把"机器脏"说成"能力坏"。
+for _stale in (Path.home() / ".pasm-agents").glob(_AGENT_ID + "*"):
+    shutil.rmtree(_stale, ignore_errors=True)
 
 from pasm_agents import NpcAgent, NPC_PERSONA_TEMPLATE          # noqa: E402
 from agents.product.npc.agent import _is_shared_memory           # noqa: E402

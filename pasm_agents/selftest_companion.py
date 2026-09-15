@@ -48,9 +48,12 @@ for _s in (sys.stdout, sys.stderr):          # Windows 控制台默认 gbk，中
 # 落盘位置由 SDK 固定为 ~/.pasm-agents/<agent_id>，没有环境变量开关。
 # 所以这里用专用 agent_id，并在开跑前清掉上一轮的残留 ——
 # 否则上次 escalate 压低的情绪会带进本轮，断言就变成"看运气"。
+# 清的是 **整族**（`selftest_companion*`），不是单个 id：本自检现在只用基础 id，
+# 但一旦有人加了 `_xxx` 变体而忘了同步清理，残留就会让同一个 wheel 给出不同结论。
+# 护栏不可重复 = 比没有护栏更坏：它会把"机器脏"说成"能力坏"。
 _AGENT_ID = "selftest_companion"
-_STATE_DIR = Path.home() / ".pasm-agents" / _AGENT_ID
-shutil.rmtree(_STATE_DIR, ignore_errors=True)
+for _stale in (Path.home() / ".pasm-agents").glob(_AGENT_ID + "*"):
+    shutil.rmtree(_stale, ignore_errors=True)
 
 from pasm_agents import ElderlyCompanion, CRISIS_KEYWORDS, LABEL_ALIASES  # noqa: E402
 import pasm_agents  # noqa: E402

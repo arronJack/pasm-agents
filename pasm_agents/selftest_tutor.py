@@ -15,10 +15,16 @@
 判据按铁律走：**无法判定 = 放行**。词表只收明确指向题目的说法，
 判定不了就落到默认分支，绝不硬猜。
 
+再记一条与产品行为有关的坑：**`pick_next()` 是故意带抖动的**
+（80% 选最弱、20% 随机防刷），所以**任何"回复里提到的知识点 == 本次 pick_next()"
+的断言都会偶发失败**。本文件第 5 项因此只钉确定性契约
+（最弱项由掌握度决定 + 回复点名知识点 + 百分比自洽 + 抖动不越界）。
+
 退出码 0=全过，1=有失败 —— 可直接进 CI。
 """
 from __future__ import annotations
 
+import re
 import shutil
 import sys
 from pathlib import Path
@@ -29,8 +35,12 @@ for _s in (sys.stdout, sys.stderr):          # Windows 控制台默认 gbk，中
     except Exception:
         pass
 
+# 落盘位置由 SDK 固定为 ~/.pasm-agents/<agent_id>，没有环境变量开关。
+# 清**整族**（`selftest_tutor*`）而不是单个 id —— 理由同 selftest_npc：
+# 只清基础 id 时，变体目录的残留会让同一个 wheel 给出前后不一致的结论。
 _AGENT_ID = "selftest_tutor"
-shutil.rmtree(Path.home() / ".pasm-agents" / _AGENT_ID, ignore_errors=True)
+for _stale in (Path.home() / ".pasm-agents").glob(_AGENT_ID + "*"):
+    shutil.rmtree(_stale, ignore_errors=True)
 
 from pasm_agents import LearningTutor                            # noqa: E402
 from agents.product.tutor.agent import _STUCK_WORDS, _GOT_IT_WORDS  # noqa: E402
@@ -118,11 +128,27 @@ def main() -> int:
           f"误判 {fp2}" if fp2 else f"0/{len(NOT_GOT_IT)} 误判")
 
     # ---- 5. 最弱项查询 ----
+    # ⚠️ 这里曾经写成 `weakest = t.pick_next()` 再断言 `weakest in r5` —— **必偶发失败**。
+    # 因为 `pick_next()` 是**故意带抖动**的（80% 选最弱、20% 随机防刷，见其 docstring），
+    # 而 `_render_reply` 每次都会再调一次，等于拿两次独立随机抽样做相等断言。
+    # 2026-09-15 实测：同一个 wheel 单跑 5 次全 11/11，塞进 `pasm-agents selftest`
+    # 连跑两次却给出 10/11 与 9/11 —— 护栏把"抖动"误报成了"能力坏"。
+    # 要钉的是**确定性契约**：① 最弱项由掌握度决定（`snapshot()["weakest"]` 是确定的）；
+    # ② 回复必须点名 persona 里的某个知识点，且括号里的百分比 = 该知识点的真实掌握度；
+    # ③ 抖动只能落在 persona 的知识点集合内（不会冒出别的话题）。
     print("\n--- 5. 最弱项查询 ---")
-    weakest = t.pick_next()
+    snap = t.snapshot()
+    check("最弱项由掌握度决定（分数加减）", snap["weakest"] == "分数加减", str(snap["weakest"]))
     r5 = t.chat("我哪里不行")
-    check("最弱项查询给出知识点", weakest in r5, f"最弱={weakest} | {r5}")
-    check("最弱项是分数加减", weakest == "分数加减", weakest)
+    _m = re.search(r"\*\*(.+?)\*\*", r5)
+    topic5 = _m.group(1) if _m else None
+    ks5 = snap["mastery"]
+    check("最弱项查询点名知识点且掌握度自洽",
+          (topic5 in PERSONA["topics"]) and (f"{int(ks5.get(topic5, 0) * 100)}%" in r5),
+          f"点名={topic5!r} | {r5}")
+    picks = {t.pick_next() for _ in range(60)}
+    check("pick_next 只在 persona 知识点内抖动",
+          picks <= set(PERSONA["topics"]), str(sorted(picks)))
 
     # ---- 6. 学情快照结构 ----
     print("\n--- 6. snapshot 结构 ---")
