@@ -11,8 +11,10 @@
 
 **档位可比性（重要）**
 ------------------------
-"可用引擎"这类清单**依赖解释器**：PASM-Lite 的具体引擎要 `import pasm_lite`
-（它需要 torch）才会注册。同一个仓，用带 torch 的解释器跑出 `['pasm','pasm-light']`，
+"可用引擎"这类清单**依赖解释器**：PASM-Lite 的具体引擎在 `engine.py` 末尾
+**自注册**，要 `import engine` 才会生效（它依赖 torch）——
+⚠ 光 `import pasm_lite` 是注册不上的，因为 `pasm_lite.py` 只导 `learning`/torch。
+同一个仓，用带 torch 的解释器跑出 `['pasm-lite']`，
 用不带 torch 的解释器跑出 `[]` —— 这不是退化，是**换了把尺子**。
 
 早期版本没记录这一点，结果把"换了解释器"误报成 `[FAIL] 能力消失`。
