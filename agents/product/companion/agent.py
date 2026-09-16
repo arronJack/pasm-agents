@@ -69,8 +69,8 @@ class ElderlyCompanion(BaseAgent):
         if self.state.total_interactions == 0:
             for i, f in enumerate(self.persona.get("key_facts") or []):
                 self.observe(
-                    title=f"{f['label']}：{f['content'][:18]}",
-                    brief=f["content"],
+                    title=f"{f['label']}：{self._fact_text(f)[:18]}",
+                    brief=self._fact_text(f),
                     tags=[f["label"], "关键事实", "不许忘"],
                     salience=5,
                     category="关键事实",
@@ -92,6 +92,26 @@ class ElderlyCompanion(BaseAgent):
             "category": "问候",
         }]
 
+    # ------- 内部工具：关键事实取字段（容错） --------------------
+
+    @staticmethod
+    def _fact_text(f: Optional[Dict[str, Any]]) -> str:
+        """取一条关键事实的正文，**不假定字段名**。
+
+        v0.30.8：官方字段是 `content`（内置模板即用它），但用户自定义 persona 时
+        写 `value` / `text` / `brief` 都很常见 —— 原来两处直接 `f["content"]` 硬取，
+        一旦字段名不同就在**聊天路径**上抛 KeyError（产品里最差的一种失败：
+        用户看到的是一片空白）。这里按常见名字依次找，找不到返回空串，
+        由调用方走正常兜底，**绝不抛异常**。
+        """
+        if not isinstance(f, dict):
+            return ""
+        for k in ("content", "value", "text", "brief", "desc", "detail"):
+            v = f.get(k)
+            if isinstance(v, str) and v.strip():
+                return v.strip()
+        return ""
+
     # ------- 聊天渲染 --------------------------------------------
 
     def _render_reply(
@@ -108,8 +128,11 @@ class ElderlyCompanion(BaseAgent):
         label_q = _label_query(text, labels=self.fact_labels)
         if label_q:
             hit = self._find_fact(label_q)
-            if hit:
-                return f"{name}想了想：「{hit['content']}」。记得清楚。"
+            _body = self._fact_text(hit)
+            if _body:
+                return f"{name}想了想：「{_body}」。记得清楚。"
+            # 命中了标签但取不到正文（字段名不认识）→ 走下面的正常兜底，
+            # 不要因为"标签命中却没正文"就把这条对话崩掉。
 
         # 2. 命中了任何关键事实 → 主动提
         for f in facts:

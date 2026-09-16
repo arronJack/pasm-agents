@@ -11,9 +11,15 @@
 |---|---|---|
 | **结构层** | 东西在不在、接线对不对 | `core_verifier` / `parity_guard` / `regression` |
 | **行为层** | 跑起来表现对不对 | `npc_lifelong` / `companion_elderly` / `study_tutor` / `soak_longrun` |
+| **产品层** | 交付给用户的三个智能体本身好不好（2026-09-16 新增） | `product_verifier` |
 
-**两者不能互相替代**：结构全绿**不能**保证 NPC 记得住玩家 ——
-看文件列表永远看不出「情绪会不会漂」。
+**三者不能互相替代**：结构全绿**不能**保证 NPC 记得住玩家 ——
+看文件列表永远看不出「情绪会不会漂」；
+而**核心全绿也不能保证产品是好的** —— 上面两层查的全是 `pasm.cognitive`，
+产品层（`pasm_agents` 的 npc / companion / tutor）长期**没有任何人验**，
+这正是本仓自己记在案的已知缺口。`product-verifier` 补上它，且上线当场就抓到
+一个真 bug：`ElderlyCompanion.chat()` 在用户自定义 persona 用 `value`/`text`
+写关键事实时抛 `KeyError: 'content'`（代码硬取字段名）→ 已修并加了回归断言。
 
 ## 怎么跑
 

@@ -113,13 +113,24 @@ print(t.snapshot())             # 学情 JSON（mastery / weakest / average / ti
 | `companion-elderly` | 30 天老人陪伴 —— 关键事实 100% 检索、危机命中 | `core` |
 | `study-tutor`       | 30 天学习陪伴 —— 学情结构 + 巩固 | `core` |
 | `soak-longrun`      | 6000 步认知 + 行为 + 记忆洪峰 —— 长效耐久 | `core` + `lite` |
+| `product-verifier`  | **产品层本身**：3 个产品的公开 API、隔离性、真实行为与反例 | 无（只需基座） |
+
+> **上面 7 个查的都是 `pasm.cognitive`（核心认知层）**，产品层长期没人验 ——
+> 这正是本仓自己记在案的已知缺口：**核心全绿不代表产品是好的**。
+> `product-verifier`（2026-09-16 新增）补上它：公开 API 是否齐全、
+> 三个产品能不能真的干活（tutor 掌握度该涨的涨该跌的跌、companion 关键事实答得上、
+> npc 被夸后行为真的变），以及**反例**（不存在的智能体名必须报错、
+> 日常闲聊不许误报危机、自检不许污染用户真实数据目录）。
+>
+> 它上线当场就抓到一个真 bug：`ElderlyCompanion.chat()` 在用户自定义 persona
+> 用 `value`/`text` 写关键事实时抛 `KeyError: 'content'`（硬取字段名）→ 已修。
 
 **它们通过 entry point 自动被基座发现**（本仓 `pyproject.toml` 里声明了
 `[project.entry-points."pasm_skills.agents"]`），所以：
 
 ```bash
 pip install pasm-agents
-python -m pasm_skills list                 # ← 7 个验证智能体会出现在这里
+python -m pasm_skills list                 # ← 8 个验证智能体会出现在这里
 python -m pasm_skills run core-verifier
 python -m pasm_skills run --all
 python -m pasm_skills run regression --update     # 刷新事实基线（写 baselines/）
