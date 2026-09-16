@@ -1,23 +1,28 @@
 {
-  "collected_at": "2026-09-14 16:44:22",
+  "collected_at": "2026-09-16 13:38:36",
   "core": {
     "cognitive": {
-      "__init__.py": "9e56ca67841a9306",
-      "agent_team.py": "ddbefac6a6b04597",
-      "coder.py": "3d23790df9e0c832",
-      "cog.py": "d0f0e4366c5db3aa",
-      "facts.py": "a42f98dae7c5ab3c",
+      "__init__.py": "b8a03cbe78bf0b16",
+      "agent_team.py": "f36af39b48d66cd9",
+      "coder.py": "3255bd5adba8180e",
+      "cog.py": "d60c4911f33c0417",
+      "facts.py": "c180dd408a2d1d03",
+      "ir.py": "f58d8e5d99ef8323",
+      "irextract.py": "dad4f32097f6f6b6",
       "learning.py": "3b9a0019308d74ba",
-      "mathlab.py": "ac034da5ffe65f0b",
-      "memory_layers.py": "ce0619e4b304b3ba",
-      "memrouter.py": "f641b4d7225a3db4",
-      "memvec.py": "02820fa794751bbe",
-      "percept.py": "898e7f488fd05be5",
-      "quantum.py": "5b1a1002952e433f",
-      "selfheal.py": "dae9d7cb489405a4",
-      "symbolic.py": "78654ad348fa377a",
-      "workctx.py": "c8d0309fa78027f4",
-      "worldmodel.py": "485a4e86ed235b5f"
+      "mathlab.py": "0dd1b708d1629d7d",
+      "memory_layers.py": "98cb57e44cffb974",
+      "memrouter.py": "bd8b2f9c69b01b82",
+      "memvec.py": "27d1833144153dd2",
+      "operators.py": "4228068c5392f06c",
+      "percept.py": "00168dccce9b7070",
+      "planning.py": "68effd7cb43bafbe",
+      "quantum.py": "db47b7e677bb4dd4",
+      "selfheal.py": "d2d31e0a77d22397",
+      "symbolic.py": "1a93e4797d652404",
+      "verifier.py": "cfb827ab85fd8e0a",
+      "workctx.py": "a9d768c469b0f6fa",
+      "worldmodel.py": "46de07f28906bac7"
     },
     "envs": {
       "__init__.py": "abdc9206f37ef70f",
@@ -31,7 +36,7 @@
     ],
     "engines_error": null,
     "errors": [],
-    "python": "3.13.14",
+    "python": "3.12.6",
     "torch": true
   },
   "lite": {
@@ -44,12 +49,11 @@
       "verify_swap.py": "61baeb7537eae4b7"
     },
     "engines": [
-      "pasm",
-      "pasm-light"
+      "pasm-lite"
     ],
     "engines_error": null,
     "errors": [],
-    "python": "3.13.14",
+    "python": "3.12.6",
     "torch": true
   }
 }

@@ -125,13 +125,17 @@ for fn in ("pasm_lite.py", "learning.py", "engine.py", "engine_api.py",
     if os.path.exists(fn):
         out["files"][fn] = h(fn)
 """ + TIER_CODE + r"""
-# 具体引擎是在 `import pasm_lite` 时注册的；它依赖 torch，
-# 所以无 torch 时这里只能拿到空清单 —— 记录档位，别当成退化。
+# 具体引擎在 `engine.py` 末尾自注册（`REGISTRY.register(ENGINE_NAME, ...)`，
+# ● 光 `import pasm_lite` 是注册不上的（`pasm_lite.py` 只导 `learning`/torch）。
+#   旧版只 import 了 pasm_lite，因此这一栏永远是空清单，
+#   只能把"档位不同"当成结论—— 结果是看不见真相。
+# 它依赖 torch，所以无 torch 时记录档位即可，别当成退化。
 if out["torch"]:
     try:
-        import pasm_lite                     # noqa: F401  触发具体引擎注册
+        import pasm_lite                     # noqa: F401
+        import engine                        # noqa: F401  自注册的是它
     except Exception as ex:
-        out["errors"].append("import pasm_lite: %r" % (ex,))
+        out["errors"].append("import pasm_lite/engine: %r" % (ex,))
 try:
     from engine_api import available
     out["engines"] = available()
