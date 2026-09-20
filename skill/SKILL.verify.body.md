@@ -16,27 +16,33 @@
 - 文档里的命令照着打，每条都说找不到智能体
 
 **原因 —— 不是你的操作错了。**
-本项目已拆成两个仓，旧版让你 `git clone` 的 `pasm-skills` 现在**只是基座**，
+本项目已拆成**三个独立包**，旧版让你 `git clone` 的 `pasm-skills` 现在**只是基座**，
 它**刻意设计成"不含任何智能体"**（`list` 显示 0 个是正常现象）。
 智能体全部搬到了 `pasm-agents`。旧版文档指向了错误的仓，所以必然跑不出结果。
 
 **修复（三条命令）**：
 
 ```bash
-pip install --upgrade pasm-agents      # 智能体在这里；会自动带上基座
+pip install --upgrade pasm-agents      # 智能体在这里；会自动带上基座与框架
 python -m pasm_skills list             # 现在应该看到 7 个智能体
 python -m pasm_skills run --all        # 约 1.5 分钟
 ```
 
-装不了 PyPI 时用源码方式（**两个仓都要**，别只 clone 基座）：
+装不了 PyPI 时用源码方式（**三个仓都要**，别只 clone 基座或漏了框架）：
 
 ```bash
 git clone https://github.com/arronJack/pasm-skills.git
 git clone https://github.com/arronJack/pasm-agents.git
-export PYTHONPATH="$PWD/pasm-skills:$PWD/pasm-agents"
+git clone https://github.com/arronJack/pasm-framework.git
+export PYTHONPATH="$PWD/pasm-skills:$PWD/pasm-agents:$PWD/pasm-framework"
 export PASM_SKILLS_AGENT_MODULES=pasm_agents.verifiers
 python -m pasm_skills list             # 应看到 7 个
 ```
+
+> ⚠️ **漏掉 `pasm-framework` 的后果**：智能体本身还能跑，但守门会如实报两条失败 ——
+> `[FAIL] 框架包 pasm_framework 可导入`、`[FAIL] 新技能框架：BaseSkill 可实例化`
+> （0.4.10 起守护的就是这一层）。见到这两条**先检查第三个仓有没有 clone**，
+> 不要以为是自己环境坏了。`pip install pasm-agents` 会自动带上它，所以走 PyPI 不会遇到。
 
 > 自检口诀：**`list` 显示 0 个 = 你只有基座**。这句话能省掉 90% 的困惑。
 

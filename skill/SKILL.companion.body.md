@@ -42,20 +42,24 @@ for med in comp.due_medication(now_hour=8):
 
 **你主要就用这几个方法**：`chat()` · `detect_crisis()` · `escalate()` · `due_medication()` · `observe()` · `save()`。
 
-## 它跑在什么之上：基座 pasm-skills
+## 它跑在什么之上：基座 `pasm-skills` + 应用框架 `pasm-framework`
 
-本技能的内容在 **`pasm-agents`** 仓，但它**依赖基座 `pasm-skills`** ——
-`BaseAgent`（记忆读写 / 情绪 / 动作选择 / 反馈 / 持久化的通用实现）在基座里，
-产品智能体只是在其上定了 persona、动作池和回复模板。
+本技能的内容在 **`pasm-agents`** 仓，它**依赖两层**：
+`BaseAgent`（记忆读写 / 情绪 / 动作选择 / 反馈 / 持久化的通用实现）在**基座**里，
+产品智能体只是在其上定了 persona、动作池和回复模板；
+**应用框架**则提供"把智能体接成完整应用 / 服务"的那一层（插件子系统、HTTP 网关、流式输出）。
 
 | | 是什么 | 装它 |
 |---|---|---|
 | **pasm-skills**（基座） | 只提供能力，**不含任何智能体** | `pip install pasm-skills` |
+| **pasm-framework**（应用框架） | 应用级表面：插件子系统 / HTTP 网关 / 流式输出 | `pip install pasm-framework` |
 | **pasm-agents**（本技能来源） | 游戏 NPC / 老人陪伴 / 学习陪伴 + 7 个验证智能体 | `pip install pasm-agents` |
 
-> 装 `pasm-agents` 会**自动带上基座**，一条命令搞定。
+> 装 `pasm-agents` 会**自动带上基座与框架**，一条命令搞定 ——
+> 用本技能里的智能体**不需要**你直接接触框架层。
 > 只装基座时 `python -m pasm_skills list` 显示 0 个智能体 —— 那是刻意的，不是你装错了。
 > 想用基座写自己的智能体：<https://github.com/arronJack/pasm-skills/blob/master/docs/TUTORIAL.md>
+> 想做**带 HTTP 接口 / 智能客服 / 站点嵌入的应用**：见 `pasm-framework` 仓的 `docs/tutorials/`。
 
 ## 什么时候用
 
