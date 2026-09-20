@@ -77,6 +77,21 @@ _NOT_SHARED_TAGS: tuple = ("自我介绍",)
 #: 把两秒前的问话当"上次那件事"念回去，读起来是错位的。
 _NOT_SHARED_TITLE_PREFIXES: tuple = ("对话：",)
 
+#: 里程碑标记词：带这些标签之一的记忆，才配说"上次……我还记着呢"。
+#: 也用作「回忆探询」的兜底检索探针 —— **两处必须同源**，否则会悄悄走偏。
+_MILESTONE_TAGS: tuple = ("玩家", "救命", "重大")
+
+#: 「回忆探询」：玩家在问"你还记得吗 / 你还记得什么"。
+#: 这类问句里**没有可检索的内容词**，按字面检索常常一条都召不回 ——
+#: 引擎分词对长句会截断候选词（4 字优先、只留前 10 个），
+#: 于是「还记得河边那次吗」比「河边那次」更容易**一条都召不回**：
+#: 玩家说得越自然，NPC 反而越"记不住"（真实用户会遇到的失败模式，
+#: 见 selftest_npc 的第 3/4/6 项）。
+_RECALL_QUERIES: tuple = (
+    "还记得", "记不记得", "记得吗", "记得么", "记得没",
+    "记得什么", "记得哪些", "记得谁", "记得啥",
+)
+
 
 def _is_shared_memory(f: Dict[str, Any]) -> bool:
     """这条记忆算不算"我和玩家共同的经历"（决定要不要说"上次……我还记着呢"）。
@@ -100,6 +115,30 @@ class NpcAgent(BaseAgent):
         merged = dict(NPC_PERSONA_TEMPLATE)
         merged.update(persona or {})
         super().__init__(agent_id=agent_id, persona=merged, **kw)
+
+    # ------- 检索 ---------------------------------------------------
+
+    def recall(self, query: str, k: int = 5) -> List[Dict[str, Any]]:
+        """检索记忆（含「回忆探询」兜底）。
+
+        为什么要覆盖
+        ------------
+        玩家最自然的问法恰恰最难召回到东西：「还记得河边那次吗」比「河边那次」
+        更容易**一条都召不回**。根因在引擎的分词——它按 4 字→3 字→2 字的顺序
+        生成候选 n-gram 后**只保留前 10 个**，长句里真正能对上记忆的短词
+        （「河边」）会在截断中被丢掉。结果是**玩家说得越客气越完整，NPC 越像失忆**。
+
+        策略：先按原句检索；只有当**召回为空**、且这句话确实是在问
+        "你还记得吗"时，才用共同经历的标记词（:data:`_MILESTONE_TAGS`）再探一次。
+        纯追加——原有能召回的场景行为完全不变，不会引入新的误召回。
+        """
+        hits = super().recall(query, k=k)
+        if hits:
+            return hits
+        q = query or ""
+        if not any(t in q for t in _RECALL_QUERIES):
+            return hits
+        return super().recall(" ".join(_MILESTONE_TAGS), k=k)
 
     # ------- 阶段 / 动作 --------------------------------------------
 
@@ -150,7 +189,7 @@ class NpcAgent(BaseAgent):
             if not _is_shared_memory(f):
                 continue
             if f.get("sal", 0) >= 4 and any(
-                t in (f.get("tags") or []) for t in ("玩家", "救命", "重大")
+                t in (f.get("tags") or []) for t in _MILESTONE_TAGS
             ):
                 brief = (f.get("brief") or f.get("title") or "").strip()
                 if brief:

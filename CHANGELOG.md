@@ -2,6 +2,37 @@
 
 本项目遵循[语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.4.11] — 2026-09-20
+
+**surface-guard 补齐框架新表面的守门；修正一个会让用户装了就崩的依赖下限。**
+
+### 修
+
+- **依赖下限写错：`pasm-framework>=0.1.0` → `>=0.3.0`**
+  - 本包随 wheel 一起发布的 `surface-guard` 自己就用了框架 **v0.2.0** 的插件子系统
+    （`build_manager` / `BasePlugin`）与 **v0.2.1** 的开发效率表面
+    （`SimpleApplication` / `@capability` / `load` / `to_dict` / `describe` / `PRESETS`）。
+  - 后果：按旧声明装上 framework 0.1.0 的用户，一跑 surface-guard 就 `AttributeError` ——
+    而 PyPI 的依赖解析**不会**拦住这种"声明够用、实际不够用"的组合。
+  - 这是发布前用「拿住用到的每个符号反推最低版本」查出来的，不是猜的。
+
+### 增
+
+- **surface-guard 守门范围从 14 名扩到 30 名契约 + 3 组行为级检查**
+  - 拆仓时写死的 14 名之后，框架又长了 16 个表面（插件子系统 / 配置系统 /
+    `SimpleApplication` / `@capability` / `stream` / `ingest`），**此前无人守**，
+    标签"14 个契约名"也与事实不符。现在：
+    - 契约名：核心 14 + 扩展 16 必须都在；`__all__` 无悬空名（防改名漏改）。
+    - 插件子系统：`build_manager` 可装配（含内联自定义插件）、`enabled` 开关生效、
+      拼错的配置名进 `unknown()`（不静默吞）、**全关插件时 `handle` 仍与 v0.1.0 一致**
+      （插件化的兼容底线）。
+    - 开发效率：预设 ≥ 6 套且 `load/to_dict/describe` 往返正常、`@capability` 命中、
+      `ingest()` 未启用知识库时**显式报错**（不许静默返回 0）、`stream()` 产出
+      `delta`/`replace` + `done` 事件序列。
+  - 计数：**22 → 33 项**（ok 33 / fail 0）。
+  - **可证伪已验**：故意删 `SimpleApplication` → 报"缺 + 悬空"；往 `__all__` 塞假名 →
+    报悬空；把 `ingest()` 改成静默返回 0 → 报错。三项都能抓，还原后复绿。
+
 ## [0.4.10] — 2026-09-16
 
 **修自检护栏自身的一处「结构性失明」—— `regression` 的 Lite 档位那一行永远看不见真相。**
