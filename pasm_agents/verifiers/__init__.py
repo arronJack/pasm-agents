@@ -12,7 +12,10 @@ from . import npc_lifelong, companion_elderly, study_tutor, soak_longrun   # noq
 # **产品层本身（npc/companion/tutor 的公开 API 与真实行为）长期没人验** ——
 # 这正是本仓自己记在案的已知缺口。核心全绿不代表产品是好的。
 from . import product_verifier                          # noqa: F401
+# v0.31 兼容守门：V1↔V2 升级时「产品/技能/框架」三层的稳定表面不能被弄破。
+# needs=()，纯基座 + 本仓即可跑，CI 立刻抓断裂。
+from . import surface_guard                             # noqa: F401
 
 __all__ = ["core_verifier", "parity_guard", "regression",
            "npc_lifelong", "companion_elderly", "study_tutor", "soak_longrun",
-           "product_verifier"]
+           "product_verifier", "surface_guard"]

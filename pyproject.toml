@@ -27,8 +27,8 @@ classifiers = [
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 
-# 依赖基座：SDK（BaseAgent）+ 智能体框架 + 场景仿真 + 打包库
-dependencies = ["pasm-skills>=0.5.0"]
+# 依赖基座（SDK / 验证器框架 / 打包库）+ 应用开发框架（独立成仓）
+dependencies = ["pasm-skills>=0.5.1", "pasm-framework>=0.1.0"]
 
 [project.optional-dependencies]
 # 想要完整档位（真情绪模块）时指向带 torch 的解释器；
