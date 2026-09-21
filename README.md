@@ -12,7 +12,7 @@
 | | 个数 | 面向 | 例子 |
 |---|---|---|---|
 | **产品智能体** | 4 | 使用者 | 游戏 NPC / 老人陪伴 / 学习陪伴 / 智能客服 |
-| **验证智能体** | 7 | 开发者 | 核心契约 / 两仓对齐 / 回归基线 / 长效耐久 + 4 个领域验证 |
+| **验证智能体** | 8 | 开发者 | 核心契约 / 两仓对齐 / 回归基线 / 长效耐久 + 3 个领域验证 + **产品层本身**（`product-verifier`） |
 
 零 LLM 依赖、断网可用、状态持久化 —— **不是 mock，驱动的是真 PASM 引擎**（拿不到就降级，并在 `tier` 如实标注）。
 
@@ -29,7 +29,7 @@
 | `pasm-mcp-server` | MCP 接入层：给任意 AI 客户端装长期记忆 | 公开 | 0.2.0 |
 | `PASM-Lite` | 教学版 + 认知引擎接口 | 公开 | — |
 | `PASM` | 核心引擎（七层仿生 / 世界模型） | **私有** | 0.7.2 |
-| `pasm-qclaw` | 桌面应用发行通道 | 公开 | 0.30.2 |
+| `pasm-qclaw` | 桌面应用发行通道 | 公开 | 0.31.1 |
 
 地址：
 [Gitee](https://gitee.com/arronzheng/pasm-agents) ·
@@ -289,24 +289,65 @@ pasm-agents/
 
 | 仓 | 定位 | 关系 |
 |---|---|---|
-| **pasm-skills** | 基座：SDK / 框架 / 打包工具 / 脚手架 | ← **本仓依赖它** |
-| **本仓 pasm-agents** | 成品智能体集 | |
+| **pasm-skills** | 基座：`BaseAgent` / SDK / 打包工具 / 脚手架 | ← **本仓依赖它** |
+| **pasm-framework** | 应用开发框架：插件子系统 / 知识库 / HTTP 网关 | ← **第 4 个产品依赖它** |
+| **本仓 pasm-agents** | 成品智能体集（4 产品 + 8 验证） | |
+| **pasm-customer-service** | 专业客服系统：DB→KB 同步 / 真 MCP 服务 / Web 壳 / Studio 场景 | 与本仓第 4 个产品**同源不同形态** |
+| pasm-mcp-server | MCP 接入层：给任意 AI 客户端装长期记忆 | 与本仓 MCP 形态互补 |
 | PASM | 认知引擎核心 | 私有；智能体可选驱动它 |
 | PASM-Lite | 教学与认知引擎协议 | 公开 |
 | pasm-qclaw | 桌面应用发行 | 公开 |
+
+> **`pasm-customer-service` 与本仓第 4 个产品什么关系？**
+> 前者是**完整可运维的系统**（含连接器、MCP 服务、Web 壳、Studio 场景一键加载、`pasm-cs` CLI），
+> 独立发 PyPI；后者是本仓里**开箱即用的智能体类**（`from pasm_agents import CustomerServiceAgent`）。
+> 两者共享同一套设计判据（就资料作答且绝不编造、客诉转人工、资料库按智能体隔离），
+> **按需二选一或叠加使用**：只要个智能体 → 装本仓；要整套客服系统 → 装 `pasm-customer-service`。
 
 想**自己写一个智能体**？看基座仓的
 [`docs/BUILD-AGENT.md`](https://gitee.com/arronzheng/pasm-skills/blob/master/docs/BUILD-AGENT.md) 与
 `templates/` —— 本仓的源码就是最好的例子。
 
-## 七、技能包
+## 七、技能包与分发渠道
 
-4 个技能包（3 产品 + 1 验证），各自独立、可单独上传：
+**5 个技能包**（4 产品 + 1 验证），各自独立、可单独上传：
+
+| 技能包 | 内容 | 平台上的名字 |
+|---|---|---|
+| `pasm-npc` | 游戏 NPC：记忆 / 情绪 / 反馈塑形 | 同左 |
+| `pasm-companion` | 老人陪伴：关键事实 / 用药提醒 / 危机升级 | 同左 |
+| `pasm-tutor` | 学习陪伴：掌握度 / 自适应选题 / 学情导出 | 同左 |
+| **`pasm-cs-agent`** | **智能客服：就资料作答 / 相关性闸门 / 客诉转人工** | 同左 |
+| `pasm-longterm-verify` | 验证层：8 个智能体对认知引擎做结构与行为体检 | 同左 |
 
 ```bash
+# ① 构建「上传用」技能包（zip-root 单文件 + slug-dir 带 frontmatter）
 python tools/build_skill.py --zip --clean
-# 产物：../pasm-agents-dist/{zip-root,slug-dir}/<name>/SKILL.md + <name>-<ver>.zip
+#    产物：../pasm-agents-dist/{zip-root,slug-dir}/<name>/SKILL.md + <name>-<ver>.zip
+
+# ② 生成「仓库内」skills/<name>/SKILL.md（供 skills.sh / skills CLI 等自动发现）
+python tools/build_skill.py --repo
+python tools/build_skill.py --check-repo   # 漂移守卫：与技能正文不一致就退出码 1
 ```
+
+> **两条产物线别混**：`pasm-agents-dist/` 是**上传用**（一次一个平台），
+> 仓库内 `skills/` 是**被自动发现用**（`npx skills@latest add <repo>` 会扫到全部 5 个）。
+> 两者都由同一份 `skill/SKILL.*.body.md` 生成，`--check-repo` 防止它们悄悄脱节。
+
+### 已发布渠道
+
+| 渠道 | 形态 | 状态 |
+|---|---|---|
+| **PyPI** | `pip install pasm-agents` | ✅ 0.5.0 |
+| **ClawHub** | 5 个技能包全部提交 | ✅ 已上架（`arronjack/pasm-*`） |
+| **本机 WorkBuddy** | `~/.workbuddy/skills/pasm-*` | ✅ 5 个已装 v0.5.0 |
+| **WorkBuddy 开放平台** | 需扫码登录后逐个人工提交 | 🟡 待小志登录 |
+| **skills.sh**（约 48 个 agent 运行时） | 由仓库内 `skills/` 自动索引 | ✅ 已具备结构，可提交仓库 |
+| **官方 MCP Registry** | `mcp-publisher` + 域名/包名所有权验证 | 🟡 结构就绪，缺所有权验证 |
+| **Coze / Character.AI / Dify** | 非 MCP、非技能包格式 | ⚠️ 只能转译重建（记忆/情绪不互通） |
+
+详见 [`pasm-customer-service` 的使用手册](https://gitee.com/arronzheng/pasm-customer-service#readme)
+（含四种形态的完整上手路径与真实效果截图）。
 
 ## 八、许可证
 

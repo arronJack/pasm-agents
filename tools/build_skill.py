@@ -2,6 +2,22 @@
 
 规则全在基座的 `pasm_skills.build` 里（归档结构、frontmatter、ZIP 自检）——
 本仓只声明"我有哪些技能"。这也正是基座存在的意义之一。
+
+三种产物（`skill/SKILL.*.body.md` 是唯一正文真相源）
+----------------------------------------------------
+1. `<仓>-dist/zip-root/<name>/SKILL.md` —— **WorkBuddy 开放平台**要的形态；
+2. `<仓>-dist/slug-dir/<name>/SKILL.md` —— **ClawHub** 要的形态（一层 slug 目录）；
+3. `skills/<name>/SKILL.md`（**就在本仓里、要提交**）—— **Agent Skills 开放生态**
+   （`npx skills add arronJack/pasm-agents` → skills.sh 索引 → Claude Code / Cursor /
+   Cline / Copilot / Gemini CLI 等约 48 个 agent 表面）。
+
+第 3 种为什么必须落在仓库里：`npx skills add <owner/repo>` 是**从 GitHub 仓库读文件**的，
+它只认 `skills/<name>/SKILL.md` 这类约定路径；而 `skill/SKILL.*.body.md`
+**它看不见**（文件名不是 `SKILL.md`）。所以前两种形态发得再对，这个渠道也是 0。
+
+改正文后忘了重新生成 `skills/` 就会**静默发旧内容** —— 所以有 `--check-repo`：
+它比对"仓库里已提交的 `skills/`"与"按当前正文+版本号应当生成的内容"，不一致就退出 1。
+发版前跑一次，或交给 CI。**别手改 `skills/` 下的文件**（改正文，然后 `--repo` 重新生成）。
 """
 from __future__ import annotations
 
@@ -11,7 +27,9 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from pasm_skills.build import ProjectMeta, SkillSpec, run_cli  # noqa: E402
+from pasm_skills.build import (  # noqa: E402
+    ProjectMeta, SkillSpec, ind, read_version, run_cli,
+)
 
 META = ProjectMeta(
     author="arronzheng",
@@ -205,5 +223,91 @@ SKILLS = [
     ),
 ]
 
+# ============================================================ 仓库内 skills/（开放生态）
+REPO_SKILLS_DIR = ROOT / "skills"
+
+
+def _repo_frontmatter(spec: SkillSpec, version: str) -> str:
+    """写给 Agent Skills 开放生态的 frontmatter。
+
+    刻意**比 zip-root 精简**：该生态只要求 `name` + `description`，
+    多塞平台专属字段反而会让别的 agent 解析器犯迷糊。
+    `description` 用**英文** —— 这个生态的检索以英文为主
+    （中文用户走 WorkBuddy / ClawHub 那两条线）。
+    `license` 用 **MIT**（= 本仓 LICENSE），不是 ClawHub 强制的 MIT-0：
+    这里是自家公开仓，没有"强制 MIT-0"的外部约束。
+    """
+    return "\n".join([
+        "---",
+        "name: %s" % spec.name,
+        "description: %s" % ind(spec.desc_en),
+        "version: %s" % version,
+        "license: MIT",
+        "author: %s" % META.author,
+        "homepage: %s" % META.homepage,
+        "repository: %s" % META.repository,
+        "---",
+        "",
+    ])
+
+
+def _repo_skill_files(version: str):
+    """算出 `skills/<name>/SKILL.md` 应有的内容。返回 [(路径, 内容), ...]。"""
+    out = []
+    for spec in SKILLS:
+        body_path = ROOT / "skill" / spec.body_file
+        body = body_path.read_text(encoding="utf-8")
+        out.append((REPO_SKILLS_DIR / spec.name / "SKILL.md",
+                    _repo_frontmatter(spec, version) + body))
+    return out
+
+
+def write_repo_skills() -> int:
+    """生成 `skills/<name>/SKILL.md`（要提交进仓库）。"""
+    version = read_version(ROOT)
+    for dest, content in _repo_skill_files(version):
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_text(content, encoding="utf-8")
+        print("[OK] 已生成 %s" % dest.relative_to(ROOT))
+    return 0
+
+
+def check_repo_skills() -> int:
+    """校验已提交的 `skills/` 是否与正文/版本号同步（陈旧即失败）。"""
+    version = read_version(ROOT)
+    stale, missing = [], []
+    for dest, content in _repo_skill_files(version):
+        rel = dest.relative_to(ROOT)
+        if not dest.exists():
+            missing.append(str(rel))
+            continue
+        if dest.read_text(encoding="utf-8").replace("\r\n", "\n") != content.replace("\r\n", "\n"):
+            stale.append(str(rel))
+    if missing or stale:
+        for n in missing:
+            print("[FAIL] 缺失：%s（跑 tools/build_skill.py --repo 生成）" % n)
+        for n in stale:
+            print("[FAIL] 陈旧：%s（正文或版本号已变，跑 tools/build_skill.py --repo 重新生成）" % n)
+        print("[FAIL] 仓库内 skills/ 与源不同步 —— 直接提交会让开放生态拿到旧内容。")
+        return 1
+    print("[OK] 仓库内 skills/ 与正文/版本号同步（%d 个技能）" % len(SKILLS))
+    return 0
+
+
 if __name__ == "__main__":
-    raise SystemExit(run_cli(SKILLS, META, root=ROOT))
+    # 先摘掉本脚本自己的两个开关，剩下的原样交给基座的 run_cli
+    _argv = sys.argv[1:]
+    _do_repo = "--repo" in _argv
+    _do_check = "--check-repo" in _argv
+    _argv = [a for a in _argv if a not in ("--repo", "--check-repo")]
+
+    _rc = 0
+    if _do_repo:
+        _rc |= write_repo_skills()
+    if _do_check:
+        _rc |= check_repo_skills()
+    if _argv:                      # 还有构建参数才跑打包（避免 --repo 单独用时重打包）
+        _rc |= run_cli(SKILLS, META, root=ROOT, argv=_argv)
+    elif not (_do_repo or _do_check):
+        _rc |= run_cli(SKILLS, META, root=ROOT, argv=[])
+    raise SystemExit(_rc)

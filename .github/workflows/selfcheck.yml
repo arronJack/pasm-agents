@@ -75,3 +75,8 @@ jobs:
       - name: 技能正文与仓库现状一致性
         # 防止"改了结构忘了改文档"——这类问题代码全绿但用户照做跑不动
         run: python tools/check_skill_docs.py
+
+      - name: 仓库内 skills/ 与正文同步（开放生态渠道）
+        # 交给 `npx skills add arronJack/pasm-agents` 的那份必须与正文一致，
+        # 否则开放生态（skills.sh / Claude Code / Cursor / Cline…）拿到旧内容。
+        run: python tools/build_skill.py --check-repo
