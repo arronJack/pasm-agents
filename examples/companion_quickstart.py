@@ -1,6 +1,7 @@
 """老人陪伴演示 —— 30 秒看到关键事实记忆 + 危机识别：
 
-    cd pasm-skills && python -m pasm_agents demo companion
+    python -m pasm_agents demo companion    # 装过 pasm-agents 后
+    python examples/companion_quickstart.py # 或从本仓源码直接跑
 """
 
 import sys

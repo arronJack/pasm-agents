@@ -4,15 +4,16 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pasm-agents"
-version = "0.4.11"
-description = "PASM 智能体集 —— 基于 PASM 引擎的成品智能体：游戏 NPC / 老人陪伴 / 学习陪伴 + 七个长期验证智能体"
+version = "0.5.0"
+description = "PASM 智能体集 —— 基于 PASM 引擎的成品智能体：游戏 NPC / 老人陪伴 / 学习陪伴 / 智能客服 + 七个长期验证智能体"
 readme = "README.md"
 requires-python = ">=3.10"
 license = { text = "MIT" }
 authors = [{ name = "arronzheng" }]
 keywords = [
     "pasm", "agent", "npc", "companion", "elderly-care", "tutor",
-    "memory", "emotion", "verification", "long-run",
+    "customer-service", "knowledge-base", "memory", "emotion",
+    "verification", "long-run",
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -33,7 +34,12 @@ classifiers = [
 #   （build_manager / BasePlugin）与 v0.2.1 的开发效率表面
 #   （SimpleApplication / @capability / load / to_dict / describe / PRESETS）。
 #   写成 >=0.1.0 会让装了旧框架的用户在跑 surface-guard 时 AttributeError。
-dependencies = ["pasm-skills>=0.5.1", "pasm-framework>=0.3.0"]
+# ★ 2026-09-21 第 4 个产品（智能客服）把下限提到 **0.4.0**：
+#   它建在 BaseApplication 上，用到 `knowledge_facts()`（只认带 source 的知识，
+#   否则会把用户上一轮自己说的话当资料答回去）、`_render_reply` 收到 facts、
+#   以及 knowledge_base 插件的 min_score 配置。这些都在 0.4.0 的 wheel 里，
+#   写低会让 pip 装出旧框架的用户在第一次问答时就出错。
+dependencies = ["pasm-skills>=0.5.1", "pasm-framework>=0.4.0"]
 
 [project.optional-dependencies]
 # 想要完整档位（真情绪模块）时指向带 torch 的解释器；

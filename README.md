@@ -11,7 +11,7 @@
 
 | | 个数 | 面向 | 例子 |
 |---|---|---|---|
-| **产品智能体** | 3 | 使用者 | 游戏 NPC / 老人陪伴 / 学习陪伴 |
+| **产品智能体** | 4 | 使用者 | 游戏 NPC / 老人陪伴 / 学习陪伴 / 智能客服 |
 | **验证智能体** | 7 | 开发者 | 核心契约 / 两仓对齐 / 回归基线 / 长效耐久 + 4 个领域验证 |
 
 零 LLM 依赖、断网可用、状态持久化 —— **不是 mock，驱动的是真 PASM 引擎**（拿不到就降级，并在 `tier` 如实标注）。
@@ -23,7 +23,7 @@
 | 仓 | 角色 | 可见性 | 版本 |
 |---|---|---|---|
 | `pasm-skills` | 基座：`BaseAgent` + 认知能力层 | 公开 | 0.5.0 |
-| **`pasm-agents`（本仓）** | **成品智能体集** | 公开 | **0.4.9** |
+| **`pasm-agents`（本仓）** | **成品智能体集** | 公开 | **0.5.0** |
 | `pasm-mcp-server` | MCP 接入层：给任意 AI 客户端装长期记忆 | 公开 | 0.2.0 |
 | `PASM-Lite` | 教学版 + 认知引擎接口 | 公开 | — |
 | `PASM` | 核心引擎（七层仿生 / 世界模型） | **私有** | 0.7.2 |
@@ -98,6 +98,41 @@ print(t.mastery("面积计算"))
 print(t.snapshot())             # 学情 JSON（mastery / weakest / average / tier）
 ```
 
+### ④ 智能客服（`CustomerServiceAgent`）
+
+唯一建在**应用框架**（`pasm-framework` 的 `BaseApplication`）上的产品 ——
+因为"客服"的核心能力是**资料库**，而资料库是框架的 `knowledge_base` 插件。
+
+```python
+from pasm_agents import CustomerServiceAgent
+
+cs = CustomerServiceAgent(agent_id="shop-cs", persona={
+    "name": "小智", "role": "售后客服", "hotline": "400-000-0000",
+})
+print(cs.answer("怎么退货？"))       # 就资料作答（带来源）——起步 FAQ 已自动灌好
+print(cs.answer("你们能送到火星吗？")) # 查不到就如实说不知道，**绝不编造**
+print(cs.answer("我要投诉你们！"))    # 自动追加【已标记转人工】并写进记忆
+
+cs.ingest_faq([{"title": "会员日优惠",
+                "content": "每月 8 日会员日，黄金会员额外 9 折。",
+                "source": "faq", "tags": ["会员", "优惠"]}])
+print(cs.snapshot())                # 档位 / 情绪 / 交互数 / 资料库规模 / 累计客诉
+```
+
+两条产品承诺各自都有"静默失效"的退化方式，所以都有**反例护栏**盯着：
+
+| 承诺 | 退化方式 | 怎么防 |
+|---|---|---|
+| 就资料作答 | 命中什么就答什么 → **答非所问** | 命中必须落在条目的标题/标签上；查不到必须说"没有查到" |
+| 客诉转人工 | 永不升级 / 乱升级 | 四类客诉必中；普通抱怨与提问必不中 |
+| 资料库隔离 | 两个客服共用一个库 → 跨租户泄漏 | 每个 `agent_id` 一个库 |
+
+> 资料库默认落在 `~/.pasm-agents/<agent_id>/kb/`，**不跟随插件那个全机共享的
+> `~/.pasm_framework/kb`** —— 不隔离时 A 店的 FAQ 会出现在 B 店的答复里。
+>
+> 完整生产系统（DB→KB 增量同步 / 真 MCP 服务 / Web 壳 / Studio 场景一键加载）
+> 在独立包 **`pasm-customer-service`**。
+
 ---
 
 ## 二、验证智能体（给 PASM 核心做长期体检）
@@ -113,14 +148,15 @@ print(t.snapshot())             # 学情 JSON（mastery / weakest / average / ti
 | `companion-elderly` | 30 天老人陪伴 —— 关键事实 100% 检索、危机命中 | `core` |
 | `study-tutor`       | 30 天学习陪伴 —— 学情结构 + 巩固 | `core` |
 | `soak-longrun`      | 6000 步认知 + 行为 + 记忆洪峰 —— 长效耐久 | `core` + `lite` |
-| `product-verifier`  | **产品层本身**：3 个产品的公开 API、隔离性、真实行为与反例 | 无（只需基座） |
+| `product-verifier`  | **产品层本身**：4 个产品的公开 API、隔离性、真实行为与反例 | 无（只需基座） |
 
 > **上面 7 个查的都是 `pasm.cognitive`（核心认知层）**，产品层长期没人验 ——
 > 这正是本仓自己记在案的已知缺口：**核心全绿不代表产品是好的**。
 > `product-verifier`（2026-09-16 新增）补上它：公开 API 是否齐全、
-> 三个产品能不能真的干活（tutor 掌握度该涨的涨该跌的跌、companion 关键事实答得上、
-> npc 被夸后行为真的变），以及**反例**（不存在的智能体名必须报错、
-> 日常闲聊不许误报危机、自检不许污染用户真实数据目录）。
+> 四个产品能不能真的干活（tutor 掌握度该涨的涨该跌的跌、companion 关键事实答得上、
+> npc 被夸后行为真的变、客服答非所问要被拦住），以及**反例**（不存在的智能体名必须报错、
+> 日常闲聊不许误报危机、普通抱怨不许判成客诉、两个客服不许串资料库、
+> 自检不许污染用户真实数据目录）。
 >
 > 它上线当场就抓到一个真 bug：`ElderlyCompanion.chat()` 在用户自定义 persona
 > 用 `value`/`text` 写关键事实时抛 `KeyError: 'content'`（硬取字段名）→ 已修。
@@ -145,10 +181,11 @@ python -m pasm_skills run regression --update     # 刷新事实基线（写 bas
 ```bash
 pip install pasm-agents
 
-# 三个产品智能体各有预置剧本
+# 四个产品智能体各有预置剧本
 pasm-agents demo npc
 pasm-agents demo companion
 pasm-agents demo tutor
+pasm-agents demo customer-service
 
 # 交互模式（quit 退出并 save）
 pasm-agents run npc --id=my_herbalist
@@ -156,6 +193,9 @@ pasm-agents run companion --id=my_companion --persona-file=personas/chenxiulan.j
 
 pasm-agents list
 pasm-agents inspect my_herbalist
+
+# 产品层护栏（零网络、秒级；四个产品全跑）
+pasm-agents selftest all
 ```
 
 或直接从源码跑 —— **每个智能体自己文件夹里就有可跑示例**：
@@ -164,9 +204,10 @@ pasm-agents inspect my_herbalist
 git clone https://gitee.com/arronzheng/pasm-agents
 cd pasm-agents
 
-python agents/product/npc/quickstart.py         # 游戏 NPC
-python agents/product/companion/quickstart.py   # 老人陪伴
-python agents/product/tutor/quickstart.py       # 学习陪伴
+python agents/product/npc/quickstart.py              # 游戏 NPC
+python agents/product/companion/quickstart.py        # 老人陪伴
+python agents/product/tutor/quickstart.py            # 学习陪伴
+python agents/product/customer_service/quickstart.py # 智能客服
 
 python agents/verifiers/parity_guard/run.py     # 验证智能体同理（<1s，最快）
 ```
@@ -203,7 +244,8 @@ pasm-agents/
 │   │   │   ├── __init__.py            转发
 │   │   │   └── quickstart.py          python agents/product/npc/quickstart.py
 │   │   ├── companion/                 老人陪伴
-│   │   └── tutor/                     学习陪伴
+│   │   ├── tutor/                     学习陪伴
+│   │   └── customer_service/          智能客服（建在框架 BaseApplication 上）
 │   └── verifiers/                   面向开发者
 │       ├── README.md                  结构层 / 行为层两层说明
 │       ├── core_verifier/             结构体检
@@ -216,7 +258,7 @@ pasm-agents/
 │
 ├── pasm_agents/                     ★ 聚合转发层（公开 API 的稳定入口）
 │   ├── __init__.py                    from pasm_agents import NpcAgent
-│   ├── npc.py / companion.py / tutor.py        → 转发到 agents/product/*
+│   ├── npc.py / companion.py / tutor.py / customer_service.py → 转发到 agents/product/*
 │   ├── verifiers/                     → 转发到 agents/verifiers/*（基座靠它发现）
 │   └── cli.py                         pasm-agents 命令行
 │

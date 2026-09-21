@@ -9,11 +9,16 @@
 
 这类"文档与结构脱节"最适合用机器查 —— 它不需要理解语义，只需要盯住几条硬事实：
 
-  1. 本仓（智能体仓）的正文里，**不许**"只 clone 基座仓"当拿到智能体了；
-  2. 正文里出现的 `pip install X` / `git clone .../X`，X 必须是已知存在的仓；
-  3. 正文里出现的 `pasm_skills.xxx` / `pasm_agents.xxx` 模块路径必须真实可导入；
-  4. 正文里出现的 CLI 子命令必须在对应 CLI 里存在；
-  5. 正文里**不许**出现给维护者看的内部注释（它会原样出现在平台上用户看到的页面里）。
+  1. 本仓（智能体仓）的指引里，**不许**"只 clone 基座仓"当拿到智能体了；
+  2. 指引里出现的 `pip install X` / `git clone .../X`，X 必须是已知存在的仓；
+  3. 指引里出现的 `pasm_skills.xxx` / `pasm_agents.xxx` 模块路径必须真实可导入；
+  4. 指引里出现的 CLI 子命令必须在对应 CLI 里存在；
+  5. 指引里**不许**出现给维护者看的内部注释（它会原样出现在平台上用户看到的页面里）；
+  6. 指引里**不许**出现拆仓后的过期导航（`cd pasm-skills && python -m pasm_agents …`）。
+
+**扫描范围 = `skill/SKILL.*.body.md` + `examples/*.py`**，因为两者都是"用户会照着做"的文本。
+（2026-09-21 补 `examples/`：那三份示例的 docstring 里就藏着第 6 类过期指令，
+只因为当时"只扫 skill/"而长期漏网 —— 检查的**范围**和它的规则一样需要被审视。）
 
 用法：
     python tools/check_skill_docs.py          # 退出码 0=通过，1=有问题
@@ -27,9 +32,17 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SKILL_DIR = ROOT / "skill"
+EXAMPLES_DIR = ROOT / "examples"
 
 #: 已知仓库（出现在 clone / pip install 里就必须是这些之一）
-KNOWN_REPOS = {"pasm-skills", "pasm-agents", "pasm-qclaw", "PASM-Lite", "PASM"}
+#: ★ 新仓落地后必须同步登记，否则正文里合法的引用会被判为"未知仓库"。
+#:   2026-09-20 拆分出的 `pasm-framework`（应用开发框架）与
+#:   2026-09-21 新建的 `pasm-customer-service`（专业客服系统）就各漏登记过一次 ——
+#:   漏登记的后果不是"检查变松"，而是**正文里正确的东西被判错**，人会开始无视这个检查。
+KNOWN_REPOS = {
+    "pasm-skills", "pasm-agents", "pasm-framework", "pasm-customer-service",
+    "pasm-mcp-server", "pasm-qclaw", "PASM-Lite", "PASM",
+}
 
 #: 本仓是智能体仓 —— 智能体在这儿，不在基座仓
 SELF_REPO = "pasm-agents"
@@ -54,8 +67,37 @@ INTERNAL_MARKERS = (
 
 
 def iter_bodies():
+    """产出所有**用户会照着做**的指引文本：技能正文 + 示例脚本。
+
+    为什么把 `examples/` 也纳进来（2026-09-21 补）
+    ----------------------------------------------
+    原来只扫 `skill/SKILL.*.body.md`。结果 `examples/*_quickstart.py` 的 docstring 里
+    一直留着 `cd pasm-skills && python -m pasm_agents demo npc` —— 拆仓后这条指令
+    **必然失败**（基座仓里一个智能体都没有）。和技能正文是**同一个病**，
+    只因为"检查只扫 skill/"而漏网了。
+
+    教训：这类检查的**扫描范围**本身就是最该被审视的东西 ——
+    范围划窄了，它守得再好也只守住一小块。
+    """
     for p in sorted(SKILL_DIR.glob("SKILL.*.body.md")):
         yield p, p.read_text(encoding="utf-8")
+    for p in sorted(EXAMPLES_DIR.glob("*.py")):
+        yield p, p.read_text(encoding="utf-8")
+
+
+#: 拆仓后的典型**过期导航指令**：让用户去基座仓跑产品智能体。
+#: 加新条目时请写清"为什么它必然失败"，别当垃圾桶用。
+STALE_NAVIGATION = (
+    ("cd pasm-skills",
+     "基座仓里一个智能体都没有（2026-09-12 拆仓），进去跑 `pasm_agents` 必然失败"),
+)
+
+
+def check_stale_navigation(problems: list) -> None:
+    for path, text in iter_bodies():
+        for pat, why in STALE_NAVIGATION:
+            if pat in text:
+                problems.append("%s：出现过期导航指令 `%s` —— %s" % (path.name, pat, why))
 
 
 def check_clone_targets(problems: list) -> None:
@@ -165,18 +207,22 @@ def check_no_internal_notes(problems: list) -> None:
 def main() -> int:
     bodies = list(iter_bodies())
     if not bodies:
-        print("[FAIL] %s 下没有 SKILL.*.body.md" % SKILL_DIR)
+        print("[FAIL] %s 与 %s 下都没有可检查的指引文本" % (SKILL_DIR, EXAMPLES_DIR))
         return 1
 
     problems: list = []
     for fn in (check_clone_targets, check_pip_targets, check_module_paths,
-               check_cli_subcommands, check_agent_names, check_no_internal_notes):
+               check_cli_subcommands, check_agent_names, check_no_internal_notes,
+               check_stale_navigation):
         try:
             fn(problems)
         except Exception as ex:                      # noqa: BLE001
             problems.append("%s 自身出错：%s" % (fn.__name__, ex))
 
-    print("检查 %d 份技能正文（6 类）" % len(bodies))
+    n_skill = len(list(SKILL_DIR.glob("SKILL.*.body.md")))
+    n_ex = len(list(EXAMPLES_DIR.glob("*.py")))
+    print("检查 %d 份指引文本（技能正文 %d + 示例脚本 %d，7 类）"
+          % (len(bodies), n_skill, n_ex))
     if problems:
         print("[FAIL] 发现 %d 个问题：" % len(problems))
         for p in problems:

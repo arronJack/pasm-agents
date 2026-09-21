@@ -1,6 +1,7 @@
 """学习陪伴演示 —— 看到薄弱点定位 + 自适应选题：
 
-    cd pasm-skills && python -m pasm_agents demo tutor
+    python -m pasm_agents demo tutor        # 装过 pasm-agents 后
+    python examples/tutor_quickstart.py     # 或从本仓源码直接跑
 """
 
 import sys

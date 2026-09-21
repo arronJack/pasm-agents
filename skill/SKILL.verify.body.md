@@ -78,7 +78,7 @@ python -m pasm_skills run --all
 | | **pasm-skills**（基座） | **pasm-agents**（本技能的来源） |
 |---|---|---|
 | 是什么 | **只提供能力，不含任何智能体** | 装智能体的地方 |
-| 提供 | `Agent` 基类与注册表、`RepoContext` 隔离探测、`scenarios` 场景仿真、`checks` 检查工具箱、技能包打包库、脚手架与教程 | `pasm_agents.verifiers`（本文这 7 个验证智能体）+ 3 个产品智能体（游戏 NPC / 老人陪伴 / 学习陪伴） |
+| 提供 | `Agent` 基类与注册表、`RepoContext` 隔离探测、`scenarios` 场景仿真、`checks` 检查工具箱、技能包打包库、脚手架与教程 | `pasm_agents.verifiers`（本文这 7 个验证智能体）+ 4 个产品智能体（游戏 NPC / 老人陪伴 / 学习陪伴 / 智能客服） |
 | 安装 | `pip install pasm-skills` | `pip install pasm-agents`（**自动带上基座**） |
 | python 包名 | `pasm_skills` | `pasm_agents` |
 | 命令行 | `pasm-skills` / `python -m pasm_skills` | ——（智能体经基座 CLI 调用） |
@@ -270,5 +270,5 @@ bounded / max_jump / span / mean / slope / rate / temp_layers / cleanup / TORCH_
 
 MIT © arronZheng（小志）。
 
-- 本技能来源仓（7 个验证智能体 + 3 个产品智能体）：<https://github.com/arronJack/pasm-agents>
+- 本技能来源仓（7 个验证智能体 + 4 个产品智能体）：<https://github.com/arronJack/pasm-agents>
 - 基座仓（框架 / SDK / 场景仿真 / 打包工具 / 教程）：<https://github.com/arronJack/pasm-skills>

@@ -2,7 +2,7 @@ name: selfcheck
 
 # 公开仓里能做到的 CI：
 #
-#   ✅ 能跑：三个产品智能体的 demo、示例脚本、技能包构建与结构自检
+#   ✅ 能跑：四个产品智能体的 demo、示例脚本、技能包构建与结构自检
 #   ✅ 能跑：验证智能体被基座**发现**（entry point 接线正确性）
 #   ❌ 不能跑：验证智能体真正跑一遍
 #              —— 它们要读 PASM 核心仓（私有）与 PASM-Lite/Studio 仓，
@@ -46,17 +46,19 @@ jobs:
       - name: 基座自检
         run: python -m pasm_skills selftest
 
-      - name: 三个产品智能体的 demo
+      - name: 四个产品智能体的 demo
         run: |
           python -m pasm_agents demo npc
           python -m pasm_agents demo companion
           python -m pasm_agents demo tutor
+          python -m pasm_agents demo customer-service
 
       - name: 示例脚本
         run: |
           python examples/npc_quickstart.py
           python examples/companion_quickstart.py
           python examples/tutor_quickstart.py
+          python examples/customer_service_quickstart.py
 
       - name: 验证智能体能否被基座发现（entry point 接线）
         run: |

@@ -1,12 +1,16 @@
 """PASM 产品智能体：以 PASM 引擎为基座的可装载、可记忆、可对话的智能体。
 
-包内三个开箱即用的产品：
+包内四个开箱即用的产品：
 
 - :class:`NpcAgent`            游戏 NPC（河边草药老头、市集算命师、酒馆老板娘……）
 - :class:`ElderlyCompanion`    老人陪伴（用药提醒、危机升级、关键事实记忆）
 - :class:`LearningTutor`       学习陪伴（薄弱点定位、巩固计划、进度跟踪）
+- :class:`CustomerServiceAgent` 智能客服（就资料作答、客诉转人工、可接大模型）
 
-每一个都基于同一个 :class:`BaseAgent` 实现，差异只在 persona、行为池和聊天模板。
+前三个基于基座的 :class:`BaseAgent` 实现，差异只在 persona、行为池和聊天模板。
+第四个（智能客服）建在应用框架 ``pasm_framework.BaseApplication`` 上 ——
+因为"客服"的核心能力是**资料库**，而资料库是框架的 ``knowledge_base`` 插件，
+不是基座 SDK 里有的东西（``pasm-framework`` 本来就是本包的依赖）。
 
 快速上手：
 
@@ -36,13 +40,47 @@ from .companion import (
 )
 from .tutor import LearningTutor
 
-__version__ = "0.4.11"
+__version__ = "0.5.0"
 __all__ = [
     "BaseAgent", "AgentState", "NpcAgent", "ElderlyCompanion", "LearningTutor",
+    "CustomerServiceAgent",
     "NPC_ACTIONS", "NPC_PERSONA_TEMPLATE", "CRISIS_KEYWORDS", "LABEL_ALIASES",
+    "DEFAULT_FAQ", "ESCALATION_RULES", "detect_escalation",
     "register_label_aliases",
     "_core_available", "_torch_available",
 ]
+
+#: 智能客服（第 4 个产品）导出的名字 —— 由下面的 ``__getattr__`` **按需**导入。
+_CS_EXPORTS = frozenset({
+    "CustomerServiceAgent", "DEFAULT_FAQ", "ESCALATION_RULES", "detect_escalation",
+})
+
+
+def __getattr__(name: str):
+    """按需导入智能客服（PEP 562），而不是在包顶部 import。
+
+    为什么必须这样：``CustomerServiceAgent`` 建在应用框架 ``pasm_framework`` 上，
+    而本包另外三个产品只需要基座 ``pasm_skills`` **就能跑**（缺引擎时降级到
+    ``light`` 档，这是本包明确承诺的行为）。
+    顶部 eager import 会让"只装了基座"的环境连 ``import pasm_agents``
+    都直接 ``ModuleNotFoundError`` —— 那等于用一个新产品废掉了既有的降级路径。
+    """
+    if name in _CS_EXPORTS:
+        try:
+            from . import customer_service as _cs
+        except ModuleNotFoundError as ex:
+            if "pasm_framework" in str(ex):
+                raise ImportError(
+                    "CustomerServiceAgent 需要应用框架：pip install pasm-framework"
+                    "（本包已把它列为依赖；源码方式运行时把它所在目录加进 PYTHONPATH）"
+                ) from ex
+            raise
+        return getattr(_cs, name)
+    raise AttributeError("module %r has no attribute %r" % (__name__, name))
+
+
+def __dir__():
+    return sorted(list(globals()) + list(_CS_EXPORTS))
 
 #: 验证智能体在 `pasm_agents.verifiers` 子包里 —— **故意不在这里 import**。
 #: 它们要读 PASM 核心仓，装在本仓的人多数只想用产品智能体，不该为此付出导入开销。

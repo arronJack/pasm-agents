@@ -1,4 +1,4 @@
-"""构建本仓的技能包（4 个：3 个产品智能体 + 1 个验证智能体）。
+"""构建本仓的技能包（5 个：4 个产品智能体 + 1 个验证智能体）。
 
 规则全在基座的 `pasm_skills.build` 里（归档结构、frontmatter、ZIP 自检）——
 本仓只声明"我有哪些技能"。这也正是基座存在的意义之一。
@@ -130,6 +130,47 @@ SKILLS = [
         ),
         plain_category="agents",
         plain_tags=["ai-agents", "pasm", "tutor", "education", "mastery", "offline"],
+        plain_license="MIT-0",
+    ),
+    SkillSpec(
+        name="pasm-cs-agent",
+        body_file="SKILL.cs-agent.body.md",
+        display_name_zh="PASM 智能客服智能体",
+        display_name_en="PASM customer-service agent",
+        desc_zh=(
+            "PASM 智能客服智能体——就自己的资料作答、答不上来如实说、客诉自动转人工。"
+            "当需要基于自有 FAQ/产品文档回答客户问题、需要答不上来时如实说明"
+            "而不是编造、需要自动识别客诉（投诉曝光/法律监管/安全事故/要求赔偿）"
+            "并交出转人工上下文、或需要把客服接成程序内调用/HTTP 接口/站点挂件/大模型平台工具时使用。"
+            "资料库可增量喂养并去重，按智能体隔离不串库，可选接任意大模型。"
+            "关键词：PASM、智能客服、CustomerServiceAgent、资料库、FAQ、客诉转人工、"
+            "知识库、多租户隔离、MCP、离线可用。"
+        ),
+        desc_en=(
+            "PASM customer-service agent - answers strictly from your own knowledge base, says "
+            "\"I don't know\" instead of making things up, and auto-escalates complaints to a human. "
+            "Use when a bot must answer from your FAQ/product docs, must admit ignorance rather than "
+            "hallucinate, must detect complaint classes (public complaint, legal, safety incident, "
+            "damages claim) and hand over escalation context, or when you need customer service as "
+            "an in-process call, HTTP endpoint, site widget or LLM-platform tool. "
+            "Incremental, de-duplicated knowledge ingestion; per-agent KB isolation (no cross-tenant "
+            "leakage); vendor-neutral optional LLM. Keywords: pasm, customer service, knowledge base, "
+            "FAQ, escalation, multi-tenant isolation, MCP, offline."
+        ),
+        plain_desc=(
+            "Customer-service agents built on the PASM cognitive engine. CustomerServiceAgent answers "
+            "only from knowledge facts (entries carrying a source) and applies a relevance gate that "
+            "requires the match to land on the entry's title or tags - so it refuses to answer instead "
+            "of answering the wrong thing (measured: true hits score 6.0-24.5 while a bogus hit via one "
+            "incidental word scored 2.29). Complaint phrases in four classes are detected and escalated "
+            "into salience-5 memory that small talk can never evict, returning escalation context for "
+            "your notifier. Knowledge is ingested incrementally with content-fingerprint de-duplication, "
+            "and each agent gets its own KB directory so multiple tenants on one host cannot leak into "
+            "each other. Optional vendor-neutral LLM with automatic fallback to KB answering. "
+            "Keywords: pasm, customer service, knowledge base, FAQ, escalation, offline."
+        ),
+        plain_category="agents",
+        plain_tags=["ai-agents", "pasm", "customer-service", "knowledge-base", "support", "offline"],
         plain_license="MIT-0",
     ),
     SkillSpec(

@@ -1,4 +1,4 @@
-"""独立跑 surface-guard —— V1↔V2 稳定表面守门（4 产品 + 3 技能 + 框架表面）
+"""独立跑 surface-guard —— V1↔V2 稳定表面守门（4 产品 + 4 技能 + 框架表面）
 
     python agents/verifiers/surface_guard/run.py
 

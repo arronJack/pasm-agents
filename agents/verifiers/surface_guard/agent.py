@@ -1,4 +1,4 @@
-"""surface-guard —— V1↔V2 稳定表面守门（4 产品智能体 + 3 技能 + 框架表面）。
+"""surface-guard —— V1↔V2 稳定表面守门（4 产品智能体 + 4 技能 + 框架表面）。
 
 为什么单独一个守门人（而不是塞进 parity-guard）
 ---------------------------------------------
@@ -26,10 +26,15 @@
    SimpleApplication + @capability 命中、`ingest()` 未启用知识库时**显式报错**
    （不许静默返回 0）、`stream()` 产出 delta/replace + done 事件序列。
 2. **产品表面**（4 智能体）：pasm_agents 公开 API 里所有 BaseAgent 子类都能
-   import + 在临时目录里 observe/act/feedback/recall + tier 合法；且 3 个已知产品
-   （NpcAgent / ElderlyCompanion / LearningTutor）在位。数据驱动——新增产品自动覆盖。
-3. **技能表面**（3 技能）：skill/ 下 SKILL.*.body.md 全部存在且非空，3 个产品技能
-   （companion / npc / tutor）在位；新技能框架 BaseSkill 能产出合法 manifest、
+   import + 在临时目录里 observe/act/feedback/recall + tier 合法；且 4 个已知产品
+   （NpcAgent / ElderlyCompanion / LearningTutor / CustomerServiceAgent）在位。
+   数据驱动——新增产品自动覆盖。
+   > 注意一个**反直觉但关键**的事实：客服产品建在框架的 `BaseApplication` 上，
+   > 却仍能被这里的 `issubclass(obj, BaseAgent)` 认出来 —— 因为
+   > **`BaseApplication` 本身就是 `BaseAgent` 的子类**。别以为"换了底座就漏检了"；
+   > 真正会让它漏检的是**忘了在 `pasm_agents/__init__.py` 里按需导出它**。
+3. **技能表面**（4 技能）：skill/ 下 SKILL.*.body.md 全部存在且非空，4 个产品技能
+   （companion / npc / tutor / cs-agent）在位；新技能框架 BaseSkill 能产出合法 manifest、
    matches() 句首触发词命中（代码技能路径活着）。
 
 任何一处断裂 → 本智能体 FAIL → CI 红。这正是任务③要的"护栏"。
@@ -45,7 +50,7 @@ from pasm_skills.agent import Agent, register
 
 @register
 class SurfaceGuardAgent(Agent):
-    """V1↔V2 稳定表面守门：4 产品智能体 + 3 技能 + 框架表面。"""
+    """V1↔V2 稳定表面守门：4 产品智能体 + 4 技能 + 框架表面。"""
 
     name = "surface-guard"
     goal = "防 V1→V2 升级弄破「产品/技能/框架」稳定表面：任何断裂 CI 立刻红"
@@ -371,8 +376,9 @@ class SurfaceGuardAgent(Agent):
         self.ok("公开 API 发现 %d 个产品智能体" % len(products),
                 "、".join(n for n, _ in products))
 
-        # 3 个已知产品必须仍在位（防改名/误删破坏下游）
-        for must in ("NpcAgent", "ElderlyCompanion", "LearningTutor"):
+        # 已知产品必须仍在位（防改名/误删破坏下游）
+        for must in ("NpcAgent", "ElderlyCompanion", "LearningTutor",
+                     "CustomerServiceAgent"):
             if any(n == must for n, _ in products):
                 self.ok("产品 %s 在位（公开 API）" % must)
             else:
@@ -422,7 +428,7 @@ class SurfaceGuardAgent(Agent):
         else:
             self.ok("技能包文件全部非空")
 
-        for must in ("companion", "npc", "tutor"):
+        for must in ("companion", "npc", "tutor", "cs-agent"):
             if must in names:
                 self.ok("产品技能 %s 在位" % must)
             else:

@@ -8,7 +8,8 @@ agents/
 ├── product/          ← 面向使用者：拿去就能用
 │   ├── npc/            游戏 NPC
 │   ├── companion/      老人陪伴
-│   └── tutor/          学习陪伴
+│   ├── tutor/          学习陪伴
+│   └── customer_service/  智能客服（唯一建在框架 BaseApplication 上的产品）
 └── verifiers/        ← 面向开发者：给认知引擎做长期体检
     ├── core_verifier/      结构体检
     ├── parity_guard/       两仓一致性

@@ -6,6 +6,7 @@
 ``pasm-agents demo npc``         30 秒预置剧本 NPC 演示
 ``pasm-agents demo companion``   老人陪伴（含危机识别）
 ``pasm-agents demo tutor``       学习陪伴
+``pasm-agents demo customer-service`` 智能客服（就资料作答 + 客诉转人工）
 
 ``pasm-agents run npc --id=xxx --persona-file=personas/herbalist.json``
        加载/创建指定 NPC，进入交互式命令行（输入 quit 退出并 save）
@@ -106,6 +107,26 @@ def demo_tutor() -> int:
     print(f"[chat 哪里差] {t.chat('我哪里不行')}")
     t.save()
     print("[ok] demo_tutor")
+    return 0
+
+
+def demo_customer_service() -> int:
+    """30 秒看懂智能客服：就资料作答 / 答不上来如实说 / 客诉转人工。"""
+    from .customer_service import CustomerServiceAgent
+    cs = CustomerServiceAgent(agent_id="demo_shop_cs", persona={
+        "name": "小智", "role": "售后客服",
+        "tone": "温暖、专业、耐心",
+        "hotline": "400-000-0000",
+    })
+    print(f"[init] {cs!r}  tier={cs.tier}  资料库={cs.kb_stats()}")
+    print(f"[answer 就资料作答] {cs.answer('怎么退货？')}")
+    print(f"[answer 查不到]    {cs.answer('你们能送到火星吗？')}")
+    print(f"[answer 客诉]      {cs.answer('我要投诉你们，再不处理就曝光！')}")
+    print(f"[kb 增量补充]      ingested={cs.ingest_faq([{'title': '会员日优惠', 'content': '每月 8 日会员日，黄金会员全场额外 9 折。', 'source': 'faq', 'tags': ['会员', '优惠']}])}")
+    print(f"[answer 新资料]    {cs.answer('会员日有什么优惠？')}")
+    print(f"[snapshot]         {_print_dict(cs.snapshot())}")
+    cs.save()
+    print("[ok] demo_customer_service")
     return 0
 
 
@@ -235,6 +256,9 @@ def _kind_to_class(kind: str):
     if kind == "tutor":
         from .tutor import LearningTutor
         return LearningTutor
+    if kind in ("customer_service", "customer-service", "cs"):
+        from .customer_service import CustomerServiceAgent
+        return CustomerServiceAgent
     return None
 
 
@@ -252,6 +276,7 @@ def run_selftests(which: str = "all") -> int:
         "npc": "pasm_agents.selftest_npc",
         "companion": "pasm_agents.selftest_companion",
         "tutor": "pasm_agents.selftest_tutor",
+        "customer-service": "pasm_agents.selftest_customer_service",
     }
     picked = list(mods) if which == "all" else [which]
     rc = 0
@@ -272,24 +297,29 @@ def main(argv: Optional[List[str]] = None) -> int:
     ap = argparse.ArgumentParser(prog="pasm-agents", description=__doc__)
     sub = ap.add_subparsers(dest="cmd", required=True)
 
+    _kinds = ["npc", "companion", "tutor", "customer-service"]
+
     demo = sub.add_parser("demo", help="跑预设剧本")
-    demo.add_argument("kind", choices=["npc", "companion", "tutor"])
+    demo.add_argument("kind", choices=_kinds)
 
     run = sub.add_parser("run", help="启动一个 agent 进入交互模式")
-    run.add_argument("kind", choices=["npc", "companion", "tutor"])
+    run.add_argument("kind", choices=_kinds)
     run.add_argument("--id", required=True)
     run.add_argument("--persona-file", default=None)
 
     sub.add_parser("list", help="列出本机全部 agent")
     sel = sub.add_parser("selftest", help="跑产品智能体的自测护栏（零网络，秒级）")
     sel.add_argument("which", nargs="?", default="all",
-                     choices=["all", "npc", "companion", "tutor"])
+                     choices=["all"] + _kinds)
     insp = sub.add_parser("inspect", help="查看 agent 快照")
     insp.add_argument("id")
 
     args = ap.parse_args(argv)
     if args.cmd == "demo":
-        return {"npc": demo_npc, "companion": demo_companion, "tutor": demo_tutor}[args.kind]()
+        _demos = {"npc": demo_npc, "companion": demo_companion,
+                  "tutor": demo_tutor,
+                  "customer-service": demo_customer_service}
+        return _demos[args.kind]()
     if args.cmd == "run":
         return run_agent(args.kind, args.id, args.persona_file)
     if args.cmd == "list":

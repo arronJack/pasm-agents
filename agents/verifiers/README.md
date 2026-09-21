@@ -11,7 +11,7 @@
 |---|---|---|
 | **结构层** | 东西在不在、接线对不对 | `core_verifier` / `parity_guard` / `regression` |
 | **行为层** | 跑起来表现对不对 | `npc_lifelong` / `companion_elderly` / `study_tutor` / `soak_longrun` |
-| **产品层** | 交付给用户的三个智能体本身好不好（2026-09-16 新增） | `product_verifier` |
+| **产品层** | 交付给用户的四个智能体本身好不好（2026-09-16 新增） | `product_verifier` |
 
 **三者不能互相替代**：结构全绿**不能**保证 NPC 记得住玩家 ——
 看文件列表永远看不出「情绪会不会漂」；

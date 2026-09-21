@@ -1,6 +1,7 @@
-"""30 秒 NPC 演示 —— 一行命令看到效果：
+"""游戏 NPC 演示 —— 记忆 / 情绪 / 反馈塑形：
 
-    cd pasm-skills && python -m pasm_agents demo npc
+    python -m pasm_agents demo npc          # 装过 pasm-agents 后
+    python examples/npc_quickstart.py       # 或从本仓源码直接跑
 """
 
 import sys

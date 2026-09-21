@@ -42,7 +42,13 @@ skill/SKILL.<name>.body.md        正文（本目录，不含 frontmatter）
 | `SKILL.npc.body.md` | `pasm-npc` | 游戏 NPC：记忆 / 情绪 / 反馈塑形 |
 | `SKILL.companion.body.md` | `pasm-companion` | 老人陪伴：关键事实 / 用药提醒 / 危机升级 |
 | `SKILL.tutor.body.md` | `pasm-tutor` | 学习陪伴：掌握度 / 自适应选题 / 学情导出 |
+| `SKILL.cs-agent.body.md` | `pasm-cs-agent` | 智能客服：就资料作答 / 客诉转人工 / 资料库隔离 |
 | `SKILL.verify.body.md` | `pasm-longterm-verify` | 验证层：7 个智能体对认知引擎做结构与行为体检 |
+
+> **技能名与 PyPI 包名不必一致**，但别撞车：
+> `pasm-cs-agent` 是**技能**（放进平台的智能体），
+> `pasm-customer-service` 是**独立 PyPI 包**（含 DB→KB 同步 / MCP 服务 / Web 壳的整套系统）。
+> 两者共用同一套"就资料作答 + 客诉转人工"内核，但不是同一个东西。
 
 ## 加一个新技能
 

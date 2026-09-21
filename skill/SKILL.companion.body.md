@@ -160,7 +160,7 @@ persona 里只配了一条「家人」事实时，问"我孙子呢"也会把那�
 
 ```bash
 python -m pasm_agents.selftest_companion     # 只跑老人陪伴（退出码 0=全过，1=有失败）
-pasm-agents selftest                         # 一条命令跑齐三个产品智能体
+pasm-agents selftest                         # 一条命令跑齐四个产品智能体
 pasm-agents selftest companion               # 也可以只跑其中一个
 ```
 
