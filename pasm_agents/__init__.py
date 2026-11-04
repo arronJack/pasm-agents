@@ -40,7 +40,7 @@ from .companion import (
 )
 from .tutor import LearningTutor
 
-__version__ = "0.5.0"
+__version__ = "0.5.1"
 __all__ = [
     "BaseAgent", "AgentState", "NpcAgent", "ElderlyCompanion", "LearningTutor",
     "CustomerServiceAgent",
