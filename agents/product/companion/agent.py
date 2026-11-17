@@ -41,6 +41,8 @@ from typing import Any, Dict, List, Optional
 
 from pasm_skills.sdk import BaseAgent
 
+from ...safety import NonResistanceGate
+
 
 # 危机关键词 —— 命中立即升级。留出扩展位（按需加方言/同义说法）。
 CRISIS_KEYWORDS: Dict[str, List[str]] = {
@@ -65,6 +67,11 @@ class ElderlyCompanion(BaseAgent):
 
     def __init__(self, agent_id: str, persona: Dict[str, Any], **kw):
         super().__init__(agent_id=agent_id, persona=persona, **kw)
+        # 对话方向闸：复用 pasm2 的非抵抗性对齐能力（用户下坠 ∧ 我在附和 → 抵抗）。
+        # 按实例持有，跨轮 EMA 趋势在本宿主内累积；pasm2 缺失时自动降级。
+        self._nr_gate = NonResistanceGate()
+        # 启动体检：旧版/缺失 pasm2 会静默失去防护，这里发显式告警（只响一次）。
+        self._nr_gate.startup_report()
         # 把 key_facts 在首次启动时全部入库（salience=5：不许忘）
         if self.state.total_interactions == 0:
             for i, f in enumerate(self.persona.get("key_facts") or []):
@@ -75,6 +82,21 @@ class ElderlyCompanion(BaseAgent):
                     salience=5,
                     category="关键事实",
                 )
+
+    # ------- 对话出口（带方向闸） -------------------------------
+
+    def chat(self, text: str) -> str:
+        """老人陪伴的每一句话都要过方向闸。
+
+        为什么必须在这里而不是 ``detect_crisis``：后者是**关键词级**危机识别，
+        需要上层显式调用，且只认"胸口闷/摔倒/不想活"这类硬信号；它拦不住
+        「我活着没意思」+「我懂，我陪你走」这种**方向性附和**——后者正是
+        非抵抗性对齐要处理的结构。两者并存，职责不重叠。
+
+        gate 不可用时原样返回（如实降级，不假装检查过）。
+        """
+        reply = super().chat(text)
+        return self._nr_gate.guard_reply(text, reply)
 
     # ------- 行为池（陪伴场景比较收敛） -------------------------
 

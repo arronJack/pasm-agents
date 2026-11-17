@@ -49,6 +49,8 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from pasm_framework import BaseApplication
 
+from ...safety import NonResistanceGate
+
 #: 默认人设。``hotline`` 会被转人工提示引用；``escalate_note`` 可自定义措辞。
 DEFAULT_PERSONA: Dict[str, Any] = {
     "name": "小智",
@@ -227,6 +229,10 @@ class CustomerServiceAgent(BaseApplication):
     ) -> None:
         self._serve_port = serve_port
         self._score_floor = float(score_floor)
+        # 对话方向闸：复用 pasm2 的非抵抗性对齐能力。按实例持有，趋势不跨租户。
+        self._nr_gate = NonResistanceGate()
+        # 启动体检：旧版/缺失 pasm2 会静默失去防护，这里发显式告警（只响一次）。
+        self._nr_gate.startup_report()
         p = dict(DEFAULT_PERSONA)
         p.update(persona or {})
         # 资料库默认**按智能体隔离**（``<persist_dir>/kb``），不跟随插件那个
@@ -344,6 +350,21 @@ class CustomerServiceAgent(BaseApplication):
         }
 
     # ------------------------------------------------------------ 对外主入口
+    def handle(self, text: str, *, session_id: str = "default",
+               user_id: Optional[str] = None,
+               meta: Optional[Dict[str, Any]] = None) -> str:
+        """统一入口 + 方向闸。
+
+        所有回复路径（能力命中 / LLM / 模板兜底）都在框架 ``_run`` 的
+        ``on_reply_final`` 汇聚，``super().handle`` 拿到的是最终文本。
+        在此处过闸，``answer()`` 追加的转人工提示会接在抵抗文本之后。
+
+        gate 不可用时原样返回（如实降级，不假装检查过）。
+        """
+        reply = super().handle(text, session_id=session_id,
+                               user_id=user_id, meta=meta)
+        return self._nr_gate.guard_reply(text, reply)
+
     def answer(self, text: str, session_id: str = "default",
                user_id: Optional[str] = None) -> str:
         """回答一个客户问题（``handle`` 的业务化封装 + 客诉转人工提示）。
