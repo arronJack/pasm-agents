@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pasm-agents"
-version = "0.6.0"
+version = "0.6.1"
 description = "PASM 智能体集 —— 基于 PASM 引擎的成品智能体：游戏 NPC / 老人陪伴 / 学习陪伴 / 智能客服 + 七个长期验证智能体"
 readme = "README.md"
 requires-python = ">=3.10"
@@ -39,7 +39,11 @@ classifiers = [
 #   否则会把用户上一轮自己说的话当资料答回去）、`_render_reply` 收到 facts、
 #   以及 knowledge_base 插件的 min_score 配置。这些都在 0.4.0 的 wheel 里，
 #   写低会让 pip 装出旧框架的用户在第一次问答时就出错。
-dependencies = ["pasm-skills>=0.6.4", "pasm-framework>=0.4.0"]
+# ★ pasm-skills 下限必须是 0.6.7（2026-11-20）：0.6.6 的 recall() 对 V1 backend 写入的
+#   可读时间字符串 ts 直接 float() 会抛 ValueError —— V1 backend + 有记忆 + 遗忘曲线开启
+#   时召回必崩（P0）。0.6.7 的 _to_epoch() 已容错修复。写成 >=0.6.4 会让已装 0.6.4~0.6.6
+#   的用户被 pip 判"满足"而不升级，继续踩 P0，故下限抬到 0.6.7。
+dependencies = ["pasm-skills>=0.6.7", "pasm-framework>=0.4.0"]
 
 [project.optional-dependencies]
 # 想要完整档位（真情绪模块）时指向带 torch 的解释器；
