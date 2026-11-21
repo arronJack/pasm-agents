@@ -7,7 +7,7 @@ description: >-
   bolt a cognitive core onto an existing game. Zero LLM dependency, offline-runnable, state persists
   to ~/.pasm-agents/<id>/. Keywords: pasm, npc, game agent, memory, emotion, persona, salience,
   offline.
-version: 0.5.0
+version: 0.6.1
 license: MIT
 author: arronzheng
 homepage: https://github.com/arronJack/pasm-agents

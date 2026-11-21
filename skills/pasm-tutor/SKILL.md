@@ -7,7 +7,7 @@ description: >-
   snapshot to feed into a profile/report/parent portal. report() applies EMA smoothing; snapshot()
   returns plain JSON (mastery/weakest/average). Zero LLM dependency, offline-runnable. Keywords: pasm,
   tutor, learning companion, mastery, weakest-topic, adaptive practice, student profile, offline.
-version: 0.5.0
+version: 0.6.1
 license: MIT
 author: arronzheng
 homepage: https://github.com/arronJack/pasm-agents
